@@ -67,7 +67,7 @@
 		<box id="item-attendees" hidden="true" orient="vertical">
 
 		     <spacer id="required-attendee-spacer" class="default-spacer" hidden="true"/>
-		     <calendar-caption label="Required Attendee"
+		     <calendar-caption id="required-attendee-caption" label="Required Attendee"
 				       control="item-required-attendee-listbox" hidden="true"/>
 		     <box orient="horizontal" id="item-required-attendee" hidden="true">
 		       <spacer class="default-spacer"/>

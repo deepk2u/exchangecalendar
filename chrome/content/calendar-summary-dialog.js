@@ -71,7 +71,7 @@ exchWebService.forewardEvent2 = {
 		
 		if(requiredAttendeeList && requiredAttendeeList.length){
 			document.getElementById("required-attendee-spacer").removeAttribute("hidden");  
-			document.getElementById("item-required-attendee-listbox").removeAttribute("hidden");  			
+			document.getElementById("required-attendee-caption").removeAttribute("hidden");  			
 			document.getElementById("item-required-attendee").removeAttribute("hidden");   
 			exchWebService.forewardEvent2.displayAttendees(requiredAttendeeList, "item-required-attendee-listbox"); 
 		}
