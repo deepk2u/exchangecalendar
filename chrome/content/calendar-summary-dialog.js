@@ -70,6 +70,8 @@ exchWebService.forewardEvent2 = {
 		
 		
 		if(requiredAttendeeList && requiredAttendeeList.length){
+			document.getElementById("required-attendee-spacer").removeAttribute("hidden");  
+			document.getElementById("item-required-attendee-listbox").removeAttribute("hidden");  			
 			document.getElementById("item-required-attendee").removeAttribute("hidden");   
 			exchWebService.forewardEvent2.displayAttendees(requiredAttendeeList, "item-required-attendee-listbox"); 
 		}
@@ -83,22 +85,19 @@ exchWebService.forewardEvent2 = {
 
 		// hide existing attendees box
 		var item_attendees_box = document.getElementById("item-attendees");
-		Cc["@mozilla.org/consoleservice;1"]
-	                     .getService(Ci.nsIConsoleService).logStringMessage(item_attendees_box.childElementCount); 
+		
 		var children = item_attendees_box.children;
 		children[0].setAttribute("hidden", true);
 		children[1].setAttribute("hidden", true);
 		children[2].setAttribute("hidden", true);
 		children[3].setAttribute("hidden", true);
+                
   	},
 
 	displayAttendees: function _displayAttendees(attendees, listBox)
-	{		Cc["@mozilla.org/consoleservice;1"]
-	                     .getService(Ci.nsIConsoleService).logStringMessage(attendees + "\n" + attendees.length); 
+	{		
          		var listbox = document.getElementById(listBox);
-			Cc["@mozilla.org/consoleservice;1"]
-	                     .getService(Ci.nsIConsoleService).logStringMessage(listbox.itemCount + listBox);
-         		var itemNode = listbox.getElementsByTagName("listitem")[0];
+			var itemNode = listbox.getElementsByTagName("listitem")[0];
          		var num_items = Math.ceil(attendees.length/2)-1;
          		while (num_items--) {
              			var newNode = itemNode.cloneNode(true);
