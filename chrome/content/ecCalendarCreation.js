@@ -38,16 +38,11 @@ var Cc = Components.classes;
 var Ci = Components.interfaces;
 var Cu = Components.utils;
 
-function exchCalendarCreation(aDocument, aWindow)
-{
-	this._document = aDocument;
-	this._window = aWindow;
+Cu.import("resource://exchangecalendar/ecFunctions.js");
 
-	this.globalFunctions = Cc["@1st-setup.nl/global/functions;1"]
-				.getService(Ci.mivFunctions);
-}
+if (! exchWebService) var exchWebService = {};
 
-exchCalendarCreation.prototype = {
+exchWebService.calendarCreation = {
 
 	oldLocationTextBox: "",
 	oldNextPage: "",
@@ -64,7 +59,7 @@ exchCalendarCreation.prototype = {
 	{
 		if (this.firstTime) {
 			// Get the next page to change how it should advance.
-			var aCustomizePage = this._document.getElementById('calendar-wizard').getPageById("customizePage");
+			var aCustomizePage = document.getElementById('calendar-wizard').getPageById("customizePage");
 			this.oldNextPage = aCustomizePage.getAttribute("next");
 			this.oldOnPageAdvanced = aCustomizePage.getAttribute("onpageadvanced");
 
@@ -72,52 +67,61 @@ exchCalendarCreation.prototype = {
 		}
 
 		if (aRadioGroep.value == "exchangecalendar") {
-			this.oldLocationTextBox = this._document.getElementById("calendar-uri").value;
-			this.oldCache = this._document.getElementById("cache").checked;
+			this.oldLocationTextBox = document.getElementById("calendar-uri").value;
+			this.oldCache = document.getElementById("cache").checked;
 
-			this._document.getElementById("calendar-uri").value = "https://auto/"+this.globalFunctions.getUUID();
-			this._document.getElementById("calendar-uri").parentNode.hidden = true;
+			document.getElementById("calendar-uri").value = "https://auto/"+exchWebService.commonFunctions.getUUID();
+			document.getElementById("calendar-uri").parentNode.hidden = true;
 
 			// Get the next page to set back new values.
-			var aCustomizePage = this._document.getElementById('calendar-wizard').getPageById("customizePage");
+			var aCustomizePage = document.getElementById('calendar-wizard').getPageById("customizePage");
 			aCustomizePage.setAttribute( "next", "exchWebService_exchange1");
 			aCustomizePage.setAttribute( "onpageadvanced", "return true;");
 
-			this._document.getElementById("cache").parentNode.hidden = true;
-			this._document.getElementById("cache").checked = false;
-			var temp = this._document.getElementById("cache").parentNode.parentNode;
+			document.getElementById("cache").parentNode.hidden = true;
+			document.getElementById("cache").checked = false;
+			var temp = document.getElementById("cache").parentNode.parentNode;
 
-			if(this._document.getElementById("exchange-cache-row")){
-				this._document.getElementById("exchange-cache-row").hidden = false;
+			if(!document.getElementById("exchange-cache-row")){
+				var exchangeCacheRow = document.createElement("row");
+				exchangeCacheRow.setAttribute("id", "exchange-cache-row");
+				var exchangeCacheRowlabel = document.createElement("label");
+				exchangeCacheRow.appendChild(exchangeCacheRowlabel);
+				var exchangeCache = document.createElement("checkbox");
+				exchangeCache.setAttribute("id", "exchange-cache");
+				exchangeCache.setAttribute("label", "exchange-cache");
+				exchangeCacheRow.appendChild(exchangeCache);
+				temp.appendChild(exchangeCacheRow);
 			}
 
 		}
 		else {
-			this._document.getElementById("calendar-uri").value = this.oldLocationTextBox;
-			this._document.getElementById("calendar-uri").parentNode.hidden = false;
+			document.getElementById("calendar-uri").value = this.oldLocationTextBox;
+			document.getElementById("calendar-uri").parentNode.hidden = false;
 
 			// Get the next page to set back  how it should advance.
-			var aCustomizePage = this._document.getElementById('calendar-wizard').getPageById("customizePage");
+			var aCustomizePage = document.getElementById('calendar-wizard').getPageById("customizePage");
 			aCustomizePage.setAttribute( "next", this.oldNextPage);
 			aCustomizePage.setAttribute( "onpageadvanced", this.oldOnPageAdvanced);
 
-			this._document.getElementById("cache").parentNode.hidden = false;
-			this._document.getElementById("cache").checked = this.oldCache;
+			document.getElementById("cache").parentNode.hidden = false;
+			document.getElementById("cache").checked = this.oldCache;
 			
-			if(this._document.getElementById("exchange-cache-row")){
-				this._document.getElementById("exchange-cache-row").hidden = true;
+			if(document.getElementById("exchange-cache-row")){
+				var temp = document.getElementById("cache").parentNode.parentNode;
+				var exchangeCacheRow = document.getElementById("exchange-cache-row");
+				temp.removeChild(exchangeCacheRow);
 			}
 		
 		}
-
-		tmpSettingsOverlay.exchWebServicesCheckRequired();
+		exchWebServicesCheckRequired();
 	},
 
 	initExchange1: function _initExchange1()
 	{
 		this.createPrefs.deleteBranch("");
 
-		var selItem = this._document.getElementById("email-identity-menulist").selectedItem;
+		var selItem = document.getElementById("email-identity-menulist").selectedItem;
 		if (selItem) {
 			var identity = selItem.getAttribute("value");
 			if (identity != "none") {
@@ -125,40 +129,40 @@ exchCalendarCreation.prototype = {
 			            .getService(Ci.nsIPrefService)
 				    .getBranch("mail.identity."+identity+".");
 
-				this._document.getElementById("exchWebService_mailbox").value = identityPrefs.getCharPref("useremail");
-				tmpSettingsOverlay.exchWebServicesInitMailbox(this._document.getElementById("exchWebService_mailbox").value);
-				this.createPrefs.setCharPref("mailbox", this._document.getElementById("exchWebService_mailbox").value);
+				document.getElementById("exchWebService_mailbox").value = identityPrefs.getCharPref("useremail");
+				exchWebServicesInitMailbox(document.getElementById("exchWebService_mailbox").value);
+				this.createPrefs.setCharPref("mailbox", document.getElementById("exchWebService_mailbox").value);
 			}
 			else {
-				this._document.getElementById("exchWebService_mailbox").value = "";
+				document.getElementById("exchWebService_mailbox").value = "";
 			}
 		}
 		else {
-			this.globalFunctions.LOG("no item selected");
+			exchWebService.commonFunctions.LOG("no item selected");
 		}
 
 
-		this._document.getElementById("exchWebService_folderpath").value = "/";
+		document.getElementById("exchWebService_folderpath").value = "/";
 
-		tmpSettingsOverlay.exchWebServicesCheckRequired();
+		exchWebServicesCheckRequired();
 	
 	},
 
 	saveSettings: function _saveSettings()
 	{
-		this.globalFunctions.LOG("saveSettings Going to create the calendar in prefs.js");
+		exchWebService.commonFunctions.LOG("saveSettings Going to create the calendar in prefs.js");
 
 		// Calculate the new calendar.id
-		var newCalId = this.globalFunctions.getUUID();
+		var newCalId = exchWebService.commonFunctions.getUUID();
 
 		// Save settings in dialog to new cal id.
-		tmpSettingsOverlay.exchWebServicesSaveExchangeSettingsByCalId(newCalId);
+		exchWebServicesSaveExchangeSettingsByCalId(newCalId);
 
 		// Need to save the useOfflineCache preference separetly because it is not part of the main.
 		this.prefs = Cc["@mozilla.org/preferences-service;1"]
 	                    .getService(Ci.nsIPrefService)
 			    .getBranch("extensions.exchangecalendar@extensions.1st-setup.nl."+newCalId+".");
-		this.prefs.setBoolPref("useOfflineCache", this._document.getElementById("exchange-cache").checked);
+		this.prefs.setBoolPref("useOfflineCache", document.getElementById("exchange-cache").checked);
 		this.prefs.setIntPref("exchangePrefVersion", 1);
 
 		// We create a new URI for this calendar which will contain the calendar.id
@@ -171,21 +175,21 @@ exchCalendarCreation.prototype = {
 		var newCal = calManager.createCalendar("exchangecalendar", tmpURI);
 
 		newCal.id = newCalId;
-		newCal.name = this._document.getElementById("calendar-name").value;
+		newCal.name = document.getElementById("calendar-name").value;
 
 		var calPrefs = Cc["@mozilla.org/preferences-service;1"]
 		            .getService(Ci.nsIPrefService)
 			    .getBranch("calendar.registry."+newCalId+".");
 
-		calPrefs.setCharPref("name", this._document.getElementById("calendar-name").value);
+		calPrefs.setCharPref("name", document.getElementById("calendar-name").value);
 
-		newCal.setProperty("color", this._document.getElementById('calendar-color').color);
-		if (!this._document.getElementById("fire-alarms").checked) {
+		newCal.setProperty("color", document.getElementById('calendar-color').color);
+		if (!document.getElementById("fire-alarms").checked) {
 			newCal.setProperty("suppressAlarms", true);
 		}
 
 
-		var selItem = this._document.getElementById("email-identity-menulist").selectedItem;
+		var selItem = document.getElementById("email-identity-menulist").selectedItem;
 		if (selItem) {
 			var identity = selItem.getAttribute("value");
 		}
@@ -205,6 +209,4 @@ exchCalendarCreation.prototype = {
 
 	},
 }
-
-var tmpCalendarCreation = new exchCalendarCreation(document, window);
 

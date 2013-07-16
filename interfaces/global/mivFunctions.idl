@@ -48,11 +48,11 @@ interface mivFunctions : nsISupports
 
   boolean safeGetBoolPref(in jsval aBranch, in AUTF8String aName, [optional] in boolean aDefaultValue, [optional] in boolean aCreateWhenNotAvailable);
 
-  int64_t safeGetIntPref(in jsval aBranch, in AUTF8String aName, [optional] in int64_t aDefaultValue, [optional] in boolean aCreateWhenNotAvailable);
+  PRInt64 safeGetIntPref(in jsval aBranch, in AUTF8String aName, [optional] in PRInt64 aDefaultValue, [optional] in boolean aCreateWhenNotAvailable);
 
   jsval getStringBundle(in AUTF8String bundleURL);
 
-  AUTF8String getString(in AUTF8String aBundleName, in AUTF8String aStringName, in jsval aParams, [optional]  in AUTF8String aComponent);
+  AUTF8String getString(in AUTF8String aBundleName, in AUTF8String aStringName, in jsval aParams, in AUTF8String aComponent);
 
   AUTF8String getUUID();
 
@@ -66,7 +66,7 @@ interface mivFunctions : nsISupports
 
   void ERROR(in AUTF8String aMessage);
 
-  AUTF8String STACK([optional]in uint64_t aDepth, [optional] in uint64_t aSkip);
+  AUTF8String STACK([optional]in PRUint64 aDepth, [optional] in PRUint64 aSkip);
 
   AUTF8String STACKshort();
 
@@ -74,17 +74,10 @@ interface mivFunctions : nsISupports
 
   AUTF8String trim(in AUTF8String str);
 
-  uint64_t copyPreferences(in jsval aFromPrefs, in jsval aToPrefs);
+  PRUint64 copyPreferences(in jsval aFromPrefs, in jsval aToPrefs);
 
   jsval xmlToJxon([optional] in AUTF8String aXMLString) ;
 
-  jsval urlToPath(in AUTF8String aPath);
-  jsval chromeToPath(in AUTF8String aPath);
+  AUTF8String splitOnCharacter(in AUTF8String aString, in PRUint64 aStartPos, in jsval aSplitCharacter);
 
-  AUTF8String splitOnCharacter(in AUTF8String aString, in uint64_t aStartPos, in jsval aSplitCharacter);
-  long long findCharacter(in AUTF8String aString, in long long aStartPos, in wchar aChar);
-  long long findString(in AUTF8String aString, in long long aStartPos, in AUTF8String  aNeedle);
-
-  AUTF8String copyCalendarSettings(in AUTF8String aFromId, [optional] in AUTF8String aToId);
-  void addCalendarById(in AUTF8String aId);
 };

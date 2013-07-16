@@ -36,11 +36,7 @@
  *
  * ***** BEGIN LICENSE BLOCK *****/
 
-var Cc = Components.classes;
-var Ci = Components.interfaces;
 var Cu = Components.utils;
-var Cr = Components.results;
-var components = Components;
 
 Cu.import("resource://exchangecalendar/ecFunctions.js");
 Cu.import("resource://exchangecalendar/ecExchangeRequest.js");
@@ -121,26 +117,22 @@ erGetItemsRequest.prototype = {
 		additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "item:ReminderDueBy");
 		additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "item:ReminderIsSet");
 		additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "item:ReminderMinutesBeforeStart");
-		additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "item:EffectiveRights");
 
 		var extFieldURI;
 		extFieldURI = additionalProperties.addChildTag("ExtendedFieldURI", "nsTypes", null);
 		extFieldURI.setAttribute("DistinguishedPropertySetId", "Common");
 		extFieldURI.setAttribute("PropertyId", MAPI_PidLidReminderSignalTime);
 		extFieldURI.setAttribute("PropertyType", "SystemTime");
-		extFieldURI = null;
-
+		
 		extFieldURI = additionalProperties.addChildTag("ExtendedFieldURI", "nsTypes", null);
 		extFieldURI.setAttribute("DistinguishedPropertySetId", "Common");
 		extFieldURI.setAttribute("PropertyId", MAPI_PidLidReminderSet);
 		extFieldURI.setAttribute("PropertyType", "Boolean");
-		extFieldURI = null;
 		
 		extFieldURI = additionalProperties.addChildTag("ExtendedFieldURI", "nsTypes", null);
 		extFieldURI.setAttribute("DistinguishedPropertySetId", "Common");
 		extFieldURI.setAttribute("PropertyId", MAPI_PidLidReminderDelta);
 		extFieldURI.setAttribute("PropertyType", "Integer");
-		extFieldURI = null;
 
 			// Calendar fields
 		switch (this.folderClass) {
@@ -172,11 +164,7 @@ erGetItemsRequest.prototype = {
 			additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "calendar:MeetingWorkspaceUrl");
 			additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "calendar:UID");
 			additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "calendar:RecurrenceId");
-
-			this.exchangeStatistics = Cc["@1st-setup.nl/exchange/statistics;1"]
-					.getService(Ci.mivExchangeStatistics);
-
-			if ((this.exchangeStatistics.getServerVersion(this.serverUrl).indexOf("Exchange2010") > -1) || (this.exchangeStatistics.getServerVersion(this.serverUrl).indexOf("Exchange2013") > -1 )) {
+			if (this.argument.ServerVersion.indexOf("Exchange2010") == 0) {
 				additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "calendar:StartTimeZone");
 				additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "calendar:EndTimeZone");
 			}
@@ -214,43 +202,36 @@ erGetItemsRequest.prototype = {
 			extFieldURI.setAttribute("DistinguishedPropertySetId", "Task");
 			extFieldURI.setAttribute("PropertyId", MAPI_PidLidTaskAccepted);
 			extFieldURI.setAttribute("PropertyType", "Boolean");
-			extFieldURI = null;
 
 			extFieldURI = additionalProperties.addChildTag("ExtendedFieldURI", "nsTypes", null);
 			extFieldURI.setAttribute("DistinguishedPropertySetId", "Task");
 			extFieldURI.setAttribute("PropertyId", MAPI_PidLidTaskLastUpdate);
 			extFieldURI.setAttribute("PropertyType", "SystemTime");
-			extFieldURI = null;
 
 			extFieldURI = additionalProperties.addChildTag("ExtendedFieldURI", "nsTypes", null);
 			extFieldURI.setAttribute("DistinguishedPropertySetId", "Task");
 			extFieldURI.setAttribute("PropertyId", MAPI_PidLidTaskAcceptanceState);
 			extFieldURI.setAttribute("PropertyType", "Integer");
-			extFieldURI = null;
 
 			extFieldURI = additionalProperties.addChildTag("ExtendedFieldURI", "nsTypes", null);
 			extFieldURI.setAttribute("DistinguishedPropertySetId", "Task");
 			extFieldURI.setAttribute("PropertyId", MAPI_PidLidTaskMode);
 			extFieldURI.setAttribute("PropertyType", "Integer");
-			extFieldURI = null;
 
 			extFieldURI = additionalProperties.addChildTag("ExtendedFieldURI", "nsTypes", null);
 			extFieldURI.setAttribute("DistinguishedPropertySetId", "Task");
 			extFieldURI.setAttribute("PropertyId", MAPI_PidLidTaskGlobalId);
 			extFieldURI.setAttribute("PropertyType", "Binary");
-			extFieldURI = null;
 
 			extFieldURI = additionalProperties.addChildTag("ExtendedFieldURI", "nsTypes", null);
 			extFieldURI.setAttribute("DistinguishedPropertySetId", "Task");
 			extFieldURI.setAttribute("PropertyId", MAPI_PidLidTaskHistory);
 			extFieldURI.setAttribute("PropertyType", "Integer");
-			extFieldURI = null;
 
 			extFieldURI = additionalProperties.addChildTag("ExtendedFieldURI", "nsTypes", null);
 			extFieldURI.setAttribute("DistinguishedPropertySetId", "Task");
 			extFieldURI.setAttribute("PropertyId", MAPI_PidLidTaskOwnership);
 			extFieldURI.setAttribute("PropertyType", "Integer");
-			extFieldURI = null;
 		}
 /*
 			//meeting fields
@@ -269,57 +250,47 @@ erGetItemsRequest.prototype = {
 		for each (var item in this.ids) {
 			var itemId = itemids.addChildTag("ItemId", "nsTypes", null);
 			itemId.setAttribute("Id", item.Id);
-			if (item.ChangeKey) {
-				itemId.setAttribute("ChangeKey", item.ChangeKey);
-			}
+			itemId.setAttribute("ChangeKey", item.ChangeKey);
 			if (item.index) {
 				//exchWebService.commonFunctions.LOG("erGetTaskItemsRequest.execute. We have an index.");
 				this.argument.occurrenceIndexes[item.Id] = item.index;
 			}
-			itemId = null;
 		}
-		itemids = null;
 
 		this.parent.xml2jxon = true;
 		
 		//exchWebService.commonFunctions.LOG("erGetTaskItemsRequest.execute:"+String(this.parent.makeSoapMessage(req)));
 
 		this.parent.sendRequest(this.parent.makeSoapMessage(req), this.serverUrl);
-		req = null;
-
-		itemShape = null;
-		additionalProperties = null;
 	},
 
 	onSendOk: function _onSendOk(aExchangeRequest, aResp)
 	{
 		//exchWebService.commonFunctions.LOG("erGetTaskItemsRequest.onSendOk: "+String(aResp)+"\n");
-		var rm = aResp.XPath("/s:Envelope/s:Body/m:GetItemResponse/m:ResponseMessages/m:GetItemResponseMessage[@ResponseClass='Success' and m:ResponseCode='NoError']/m:Items/*");
+		var rm = aResp.XPath("/s:Envelope/s:Body/m:GetItemResponse/m:ResponseMessages/m:GetItemResponseMessage[@ResponseClass='Success' and m:ResponseCode='NoError']");
 
 		var items = [];
 		
-		for (var index in rm) {
-			items.push(rm[index].clone());
-			rm[index] = null;
+		for each (var e in rm) {
+			var item = e.XPath("/m:Items/*");
+			if (item.length > 0)
+			{
+				//exchWebService.commonFunctions.LOG("erGetTaskItemsRequest.item: "+item[0]+"\n");
+				items.push(item[0]);
+			}
 		}
-
-		rm = null;
 
 		if (this.mCbOk) {
 			this.mCbOk(this, items);
 		}
 
-		items= null;
 		this.isRunning = false;
-		aResp = null;
-		this.parent = null;
 	},
 
 	onSendError: function _onSendError(aExchangeRequest, aCode, aMsg)
 	{
-		//exchWebService.commonFunctions.LOG("erGetTaskItemsRequest.onSendError: "+String(aMsg)+"\n");
+		exchWebService.commonFunctions.LOG("erGetTaskItemsRequest.onSendError: "+String(aMsg)+"\n");
 		this.isRunning = false;
-		this.parent = null;
 		if (this.mCbError) {
 			this.mCbError(this, aCode, aMsg);
 		}

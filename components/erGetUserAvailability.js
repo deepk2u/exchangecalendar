@@ -116,50 +116,26 @@ erGetUserAvailabilityRequest.prototype = {
 
 		//exchWebService.commonFunctions.LOG("erGetUserAvailabilityRequest.execute: "+String(this.parent.makeSoapMessage(req))+"\n");
                 this.parent.sendRequest(this.parent.makeSoapMessage(req), this.serverUrl);
-		req = null;
 	},
 
 	onSendOk: function _onSendOk(aExchangeRequest, aResp)
 	{
 		//exchWebService.commonFunctions.LOG("erGetUserAvailabilityRequest.onSendOk: "+String(aResp)+"\n");
 
-		var rm = aResp.XPath("/s:Envelope/s:Body/GetUserAvailabilityResponse/FreeBusyResponseArray/FreeBusyResponse/ResponseMessage[@ResponseClass='Success' and ResponseCode='NoError']");
+		var rm = aResp.XPath("/s:Envelope/s:Body/m:GetUserAvailabilityResponse/m:FreeBusyResponseArray/m:FreeBusyResponse/m:ResponseMessage[@ResponseClass='Success' and m:ResponseCode='NoError']");
+
 
 		if (rm.length == 0) {
-			rm = null;
-			var rm = aResp.XPath("/s:Envelope/s:Body/GetUserAvailabilityResponse/FreeBusyResponseArray/FreeBusyResponse/ResponseMessage[@ResponseClass='Error']");
-			if (rm.length == 0) {
-				//Check if we only have a /s:Envelope/s:Body/GetUserAvailabilityResponse
-				var rm = aResp.XPath("/s:Envelope/s:Body/GetUserAvailabilityResponse");
-				if (rm.length == 0) {
-					exchWebService.commonFunctions.LOG("erGetUserAvailabilityRequest.onSendOk: Respons does not contain expected field");
-					this.onSendError(aExchangeRequest, this.parent.ER_ERROR_RESPONS_NOT_VALID, "Respons does not contain expected field");
-					rm = null;
-					this.isRunning = false;
-					return;
-				}
-			}
-			else {
-				var responseCode = rm[0].getTagValue("m:ResponseCode", "");
-				var messageText = rm[0].getTagValue("m:MessageText", "");
-				if (responseCode.indexOf("ErrorMailRecipientNotFound") > -1) {
-					exchWebService.commonFunctions.LOG("erGetUserAvailabilityRequest.onSendOk: "+messageText);
-				}
-				else {
-					exchWebService.commonFunctions.LOG("erGetUserAvailabilityRequest.onSendOk: "+messageText);
-					this.onSendError(aExchangeRequest, this.parent.ER_ERROR_NOACCESSTOFREEBUSY, messageText);
-					rm = null;
-					this.isRunning = false;
-					return;
-				}
-			}
+			exchWebService.commonFunctions.LOG("erGetUserAvailabilityRequest.onSendOk: Respons does not contain expected field");
+			this.onSendError(aExchangeRequest, this.parent.ER_ERROR_RESPONS_NOT_VALID, "Respons does not contain expected field");
+			return;
 		}
 		rm = null;
 
-		var items = aResp.XPath("/s:Envelope/s:Body/GetUserAvailabilityResponse/FreeBusyResponseArray/FreeBusyResponse/FreeBusyView/CalendarEventArray/CalendarEvent");
+		var items = aResp.XPath("/s:Envelope/s:Body/m:GetUserAvailabilityResponse/m:FreeBusyResponseArray/m:FreeBusyResponse/m:FreeBusyView/t:CalendarEventArray/t:CalendarEvent");
 
 		// We also need to get the working hour period. But lightning cannot handle this.
-		//dump("erGetUserAvailabilityRequest.onSendOk 2: We have '"+items.length+"' items.\n");
+		//exchWebService.commonFunctions.LOG("erGetUserAvailabilityRequest.onSendOk 2: We have '"+items.length+"' items.");
 	
 		if (this.mCbOk) {
 			this.mCbOk(this, items);

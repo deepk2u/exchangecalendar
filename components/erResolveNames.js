@@ -79,14 +79,6 @@ erResolveNames.prototype = {
 			req.setAttribute("SearchScope", "ContactsActiveDirectory");
 		}
 
-		this.exchangeStatistics = Cc["@1st-setup.nl/exchange/statistics;1"]
-				.getService(Ci.mivExchangeStatistics);
-
-		if ((this.exchangeStatistics.getServerVersion(this.serverUrl).indexOf("2007") == -1) &&
-		    (this.exchangeStatistics.getServerVersion(this.serverUrl).indexOf("2010_SP1") == -1)){
-			req.setAttribute("ContactDataShape", "AllProperties");
-		}
-
 //		var parentFolder = makeParentFolderIds2("ParentFolderIds", this.argument);
 //		req.addChildTagObject(parentFolder);
 
@@ -99,15 +91,14 @@ erResolveNames.prototype = {
 
 		this.parent.xml2jxon = true;
 
-		//exchWebService.commonFunctions.LOG("erResolveNames.execute:"+String(this.parent.makeSoapMessage(req)));
+		exchWebService.commonFunctions.LOG("erResolveNames.execute:"+String(this.parent.makeSoapMessage(req)));
 
                 this.parent.sendRequest(this.parent.makeSoapMessage(req), this.serverUrl);
-		req = null;
 	},
 
 	onSendOk: function _onSendOk(aExchangeRequest, aResp)
 	{
-		//exchWebService.commonFunctions.LOG("erResolveNames.onSendOk:"+String(aResp));
+		exchWebService.commonFunctions.LOG("erResolveNames.onSendOk:"+String(aResp));
 
 		var rm = aResp.XPath("/s:Envelope/s:Body/m:ResolveNamesResponse/m:ResponseMessages/m:ResolveNamesResponseMessage[@ResponseClass='Success' or @ResponseClass='Warning']");
 
@@ -149,7 +140,7 @@ erResolveNames.prototype = {
 
 	onSendError: function _onSendError(aExchangeRequest, aCode, aMsg)
 	{
-		//exchWebService.commonFunctions.LOG("erResolveNames.onSendError: aCode"+aCode+", aMsg:"+aMsg);
+		exchWebService.commonFunctions.LOG("erResolveNames.onSendError: aCode"+aCode+", aMsg:"+aMsg);
 		this.isRunning = false;
 		if (this.mCbError) {
 			this.mCbError(this, aCode, aMsg);

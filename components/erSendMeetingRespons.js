@@ -119,16 +119,14 @@ erSendMeetingResponsRequest.prototype = {
 
 		var referenceItemId = r.addChildTag("ReferenceItemId", "nsTypes", null);
 		referenceItemId.setAttribute("Id", this.item.id);
-		referenceItemId.setAttribute("ChangeKey", this.item.changeKey);
+		referenceItemId.setAttribute("ChangeKey", this.item.getProperty("X-ChangeKey"));
 
 		req.addChildTag("Items", "nsMessages", null).addChildTagObject(r);
-		r = null;
 
 		this.parent.xml2jxon = true;
 
 		//exchWebService.commonFunctions.LOG("erSendMeetingResponsRequest.execute>"+String(this.parent.makeSoapMessage(req)));
                 this.parent.sendRequest(this.parent.makeSoapMessage(req), this.serverUrl);
-		req = null;
 	},
 
 	onSendOk: function _onSendOk(aExchangeRequest, aResp)
@@ -146,7 +144,6 @@ erSendMeetingResponsRequest.prototype = {
 			this.onSendError(aExchangeRequest, this.parent.ER_ERROR_SOAP_ERROR, "Error on sending meeting respons:"+responseCode);
 			return;
 		}
-		rm = null;
 
 		if (this.mCbOk) {
 			this.mCbOk(this); //, itemId, changeKey);

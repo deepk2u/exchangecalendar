@@ -31,35 +31,31 @@ var Cu = Components.utils;
 var Ci = Components.interfaces;
 var Cc = Components.classes;
 
-function exchChangeCalendarProperties(aDocument, aWindow)
-{
-	this._document = aDocument;
-	this._window = aWindow;
+Cu.import("resource://exchangecalendar/ecFunctions.js");
+Cu.import("resource://calendar/modules/calUtils.jsm");
 
-	this.globalFunctions = Cc["@1st-setup.nl/global/functions;1"]
-				.getService(Ci.mivFunctions);
-}
+if (! exchWebService) var exchWebService = {};
 
-exchChangeCalendarProperties.prototype = {
+exchWebService.changeCalendarProperties={
 
 	onLoad : function _onLoad(){
-		var aCalendar = this._window.arguments[0].calendar;
+		var aCalendar = window.arguments[0].calendar;
 		if(aCalendar.type == "exchangecalendar"){
-			this._document.getElementById("calendar-cache-row").setAttribute("collapsed",true);
+			document.getElementById("calendar-cache-row").setAttribute("collapsed",true);
 			if (aCalendar.getProperty("exchWebService.useOfflineCache")){
-					this._document.getElementById("exchange-cache").checked=aCalendar.getProperty("exchWebService.useOfflineCache");
+					document.getElementById("exchange-cache").checked=aCalendar.getProperty("exchWebService.useOfflineCache");
 				
 			}
 		}
 		else{
-			this._document.getElementById("exchange-cache-row").setAttribute("collapsed",true);
+			document.getElementById("exchange-cache-row").setAttribute("collapsed",true);
 		}
 	},
 
 	changeCachePref : function _changeCachePref()
 	{
-		var aCalendar = this._window.arguments[0].calendar;
-		if(this._document.getElementById("exchange-cache").checked){
+		var aCalendar = window.arguments[0].calendar;
+		if(document.getElementById("exchange-cache").checked){
 			aCalendar.setProperty("exchWebService.useOfflineCache", true);
 		}
 		else{
@@ -67,7 +63,4 @@ exchChangeCalendarProperties.prototype = {
 		}
 	},
 }
-
-var tmpChangeCalendarProperties = new exchChangeCalendarProperties(document, window);
-window.addEventListener("load", function () { window.removeEventListener("load",arguments.callee,false); tmpChangeCalendarProperties.onLoad(); }, true);
-
+window.addEventListener("load", exchWebService.changeCalendarProperties.onLoad, true);

@@ -43,13 +43,9 @@ var components = Components;
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
-Cu.import("resource://calendar/modules/calUtils.jsm");
-
 Cu.import("resource://exchangecalendar/ecFunctions.js");
 
-Cu.import("resource://interfaces/xml2jxon/mivIxml2jxon.js");
-
-var EXPORTED_SYMBOLS = ["ExchangeRequest", "nsSoapStr","nsTypesStr","nsMessagesStr","nsAutodiscoverResponseStr1", "nsAutodiscoverResponseStr2", "nsAutodiscover2010Str", "nsErrors", "nsWSAStr", "nsXSIStr", "xml_tag"];
+var EXPORTED_SYMBOLS = ["ExchangeRequest", "nsSoapStr","nsTypesStr","nsMessagesStr","nsAutodiscoverResponseStr1", "nsAutodiscoverResponseStr2", "xml_tag"];
 
 var xml_tag = '<?xml version="1.0" encoding="utf-8"?>\n';
 
@@ -58,10 +54,6 @@ const nsTypesStr = "http://schemas.microsoft.com/exchange/services/2006/types";
 const nsMessagesStr = "http://schemas.microsoft.com/exchange/services/2006/messages";
 const nsAutodiscoverResponseStr1 = "http://schemas.microsoft.com/exchange/autodiscover/responseschema/2006";
 const nsAutodiscoverResponseStr2 = "http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a";
-const nsAutodiscover2010Str = "http://schemas.microsoft.com/exchange/2010/Autodiscover";
-const nsWSAStr = "http://www.w3.org/2005/08/addressing";
-const nsXSIStr = "http://www.w3.org/2001/XMLSchema-instance";
-const nsErrors = "http://schemas.microsoft.com/exchange/services/2006/errors";
 
 var gExchangeRequestVersion = "0.1";
 
@@ -73,8 +65,8 @@ function ExchangeRequest(aArgument, aCbOk, aCbError, aListener)
 {
 	this.mData = "";
 	this.mArgument = aArgument;
-	this.mCbOk = aCbOk;
-	this.mCbError = aCbError;
+	this.mCbOk   = aCbOk;
+	this.mCbError   = aCbError;
 	this.retries = 0;
 	this.urllist = [];
 	this.currentUrl = "";
@@ -88,10 +80,7 @@ function ExchangeRequest(aArgument, aCbOk, aCbError, aListener)
 	this.badCertCount = 0;
 	this._notificationCallbacks = null;
 
-	this.globalFunctions = Cc["@1st-setup.nl/global/functions;1"]
-				.getService(Ci.mivFunctions);
-
-	this.uuid = this.globalFunctions.getUUID();
+	this.uuid = exchWebService.commonFunctions.getUUID();
 
 	this.prePassword = "";
 
@@ -105,12 +94,6 @@ function ExchangeRequest(aArgument, aCbOk, aCbError, aListener)
 
 	this.exchangeBadCertListener2 = Cc["@1st-setup.nl/exchange/badcertlistener2;1"]
 			.getService(Ci.mivExchangeBadCertListener2);
-
-	this.observerService = Cc["@mozilla.org/observer-service;1"]  
-	                          .getService(Ci.nsIObserverService); 
-
-	this.timeZones = Cc["@1st-setup.nl/exchange/timezones;1"]
-				.getService(Ci.mivExchangeTimeZones);
 
 }
 
@@ -148,23 +131,21 @@ ExchangeRequest.prototype = {
 	ER_ERROR_ITEM_UPDATE_UNKNOWN: -211,  // Unknown error during item ipdate.
 	ER_ERROR_SPECIFIED_SMTP_NOTFOUND: -212, // Specified SMTP address does not exist.
 	ER_ERROR_CONVERTID: -214, // Specified SMTP address does not exist.
-	ER_ERROR_NOACCESSTOFREEBUSY: -215, // Specified user has no access to free/busy information of specified mailbox.
-	ER_ERROR_FINDOCCURRENCES_UNKNOWN: -216, // We received an unkown error while trying to get the occurrences. 
 
 	ERR_PASSWORD_ERROR: -300, // To many password errors.
 
 	get debug()
 	{
-		if ((this.debuglevel == 0) || (!this.globalFunctions.shouldLog())) {
+		if ((this.debuglevel == 0) || (!exchWebService.commonFunctions.shouldLog())) {
 			return false;
 		}
 
-		return this.globalFunctions.safeGetBoolPref(this.prefB, "extensions.1st-setup.network.debug", false, true);
+		return exchWebService.commonFunctions.safeGetBoolPref(this.prefB, "extensions.1st-setup.network.debug", false, true);
 	},
 
 	get debuglevel()
 	{
-		return this.globalFunctions.safeGetIntPref(this.prefB, "extensions.1st-setup.network.debuglevel", 0, true);
+		return exchWebService.commonFunctions.safeGetIntPref(this.prefB, "extensions.1st-setup.network.debuglevel", 0, true);
 	},
 
 	logInfo: function _logInfo(aMsg, aLevel)
@@ -172,7 +153,7 @@ ExchangeRequest.prototype = {
 		if (!aLevel) var aLevel = 1;
 
 		if ((this.debug) && (aLevel <= this.debuglevel)) {
-			this.globalFunctions.LOG(this.uuid+": "+aMsg);
+			exchWebService.commonFunctions.LOG(this.uuid+": "+aMsg);
 		}
 	},
 
@@ -194,6 +175,12 @@ ExchangeRequest.prototype = {
 	{
 		this.shutdown = true;
 		this.xmlReq.abort();
+	},
+
+	make_basic_auth: function _make_basic_auth(user, password) {
+	  var tok = user + ':' + password;
+	  var hash = btoa(tok);
+	  return "Basic " + hash;
 	},
 
 	sendRequest: function(aData, aUrl)
@@ -243,10 +230,8 @@ ExchangeRequest.prototype = {
 		catch(err) {
 			this.logInfo(err);
 			this.fail(this.ER_ERROR_USER_ABORT_AUTHENTICATION, "User canceled providing a valid password for url="+this.currentUrl+". Aborting this request.");
-			myAuthPrompt2 = null;
 			return;
 		}
-		myAuthPrompt2 = null;
 
 		this.xmlReq = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance();
 
@@ -273,12 +258,6 @@ ExchangeRequest.prototype = {
 			if (password) {
 				if (this.debug) this.logInfo("We have a prePassword: *******");
 				this.xmlReq.open("POST", this.currentUrl, true, openUser, password);
-
-				// If we have full credentials we are going to add a Basic auth header just for the case we support Basic.
-				var tok = openUser + ':' + password;
-				var basicAuthHash = btoa(tok);
-				this.xmlReq.setRequestHeader('Authorization', "Basic " + basicAuthHash);
-				
 				//this.xmlReq.open("POST", this.currentUrl, true, this.mArgument.user, password);
 			}
 			else {
@@ -296,13 +275,11 @@ ExchangeRequest.prototype = {
 			}
 
 			this.fail(this.ER_ERROR_OPEN_FAILED,"Could not connect to specified host:"+err);
-			return;
 		}
 
 		this.xmlReq.overrideMimeType('text/xml');
 		this.xmlReq.setRequestHeader("Content-Type", "text/xml");
-//		this.xmlReq.setRequestHeader("User-Agent", "extensions.1st-setup.nl/" + gExchangeRequestVersion+"/username="+this.mArgument.user);
-		this.xmlReq.setRequestHeader("User-Agent", this.globalFunctions.safeGetCharPref(this.prefB, "extensions.1st-setup.others.userAgent", "exchangecalendar@extensions.1st-setup.nl", true));
+		this.xmlReq.setRequestHeader("User-Agent", "extensions.1st-setup.nl/" + gExchangeRequestVersion+"/username="+this.mArgument.user);
 
 		// This is required for NTLM authenticated sessions. Which is default for a default EWS install.
 		this.xmlReq.setRequestHeader("Connection", "keep-alive");
@@ -324,8 +301,6 @@ catch(err) {
 
 		if (this.debug) this.logInfo(": sendRequest Sending: " + this.mData+"\n", 2);
 
-		//this.exchangeStatistics.addDataSend(this.currentUrl, this.mData.length);
-
 		this.xmlReq.send(this.mData);
 	},
 
@@ -339,95 +314,6 @@ catch(err) {
 	loadend: function _loadend(evt)
 	{
 		if (this.debug) this.logInfo(": ExchangeRequest.loadend");
-
-		let xmlReq = this.mXmlReq;
-
-		if (this.debug) this.logInfo(": ExchangeRequest.loadend :"+evt.type+", readyState:"+xmlReq.readyState+", status:"+xmlReq.status);
-		if (this.debug) this.logInfo(": ExchangeRequest.loadend :"+xmlReq.responseText,2);
-
-		//this.exchangeStatistics.addDataRead(this.currentUrl, xmlReq.responseText.length);
-
-		if (xmlReq.readyState != 4) {
-			if (this.debug) this.logInfo("readyState < 4. THIS SHOULD NEVER HAPPEN. PLEASE REPORT.");
-			this.fail(this.ER_ERROR_OPEN_FAILED,"Ready state != 4, readyState:"+xmlReq.readyState);
-			return;
-		}
-
-		if (this.isHTTPRedirect(evt)) {
-			return;
-		}
-
-		if (this.isHTTPError()) {
-			return;
-		}
-
-		var xml = xmlReq.responseText; // bug 270553
-
-// Removed following as this is no longer a problem as we are not using E4X anymore.
-//		xml = xml.replace(/&#x10;/g, ""); // BUG 61 remove hexadecimal code 0x10. It will fail in xml conversion.
-
-		try {
-			var newXML = new mivIxml2jxon('', 0, null);
-		}
-		catch(exc) { if (this.debug) this.logInfo("createInstance error:"+exc);}
-
-		try {
-			newXML.addNameSpace("s", nsSoapStr);
-			newXML.addNameSpace("m", nsMessagesStr);
-			newXML.addNameSpace("t", nsTypesStr);
-			newXML.addNameSpace("a1", nsAutodiscoverResponseStr1);
-			newXML.addNameSpace("a2", nsAutodiscoverResponseStr2);
-var d=new Date();var time1=d.getTime();
-			newXML.processXMLString(xml, 0, null);
-var d=new Date();var time2=d.getTime();
-		}
-		catch(exc) { if (this.debug) this.logInfo("processXMLString error:"+exc.name+", "+exc.message+"\n"+xml);} 
-
-//		dump("StringSize:"+xml.length+", xmlSize:"+newXML.getSize()+"\n");
-
-		this.mAuthFail = 0;
-		this.mRunning  = false;
-
-		if (this.mCbOk) {
-			// Try to get server version and store it.
-			try {
-				let serverVersion = newXML.XPath("/s:Header/ServerVersionInfo");
-				if ((serverVersion.length > 0) && (serverVersion[0].getAttribute("Version") != "")) {
-					this.exchangeStatistics.setServerVersion(this.currentUrl, serverVersion[0].getAttribute("Version"));
-				}
-/*				else {
-					var header = newXML.XPath("/s:Header");
-					if (header.length > 0) {
-						dump(" @@@ We have not found serverVersion:"+header[0]+"\n");
-					}
-					else {
-						dump(" !!! Could not find header.\n");
-					}
-				}*/
-				serverVersion[0] = null;
-				serverVersion = null;
-			}
-			catch(err) { }
-
-			this.retryCount = 0;
-
-			if (exchWebService.prePasswords[this.mArgument.user+"@"+this.currentUrl]) {
-				exchWebService.prePasswords[this.mArgument.user+"@"+this.currentUrl].tryCount = 0;
-			}
-
-var d=new Date();var time3=d.getTime();
-try {
-			this.mCbOk(this, newXML);
-}catch(err) { dump("onloadend: err:"+err+"\n");}
-var d=new Date();var time4=d.getTime();
-			this.originalReq = null;
-		}
-
-//dump(" stat: time1:"+(time2-time1)+", time2:"+(time4-time3)+"\n");
-		newXML = null;
-
-		this.observerService.notifyObservers(this._notificationCallbacks, "onExchangeConnectionOk", this.currentUrl);
-
 	},
 
 	progress: function _progress(evt)
@@ -467,8 +353,6 @@ catch(err){
 		if (this.isHTTPRedirect(evt)) return;
 
 		if (this.tryNextURL()) return;
-
-		this.observerService.notifyObservers(this._notificationCallbacks, "onExchangeConnectionError", this.currentUrl+"|"+this._notificationCallbacks.lastStatus+"|"+this._notificationCallbacks.lastStatusArg);
 
 		switch (this._notificationCallbacks.lastStatus) {
 		case 0x804b0003: 
@@ -514,7 +398,6 @@ catch(err){
 		if (evt.type != "abort") {
 			if (this.debug) this.logInfo("ecExchangeRequest.abort: "+evt.type);
 		}
-		dump("Abort!\n");
 //		this.fail(-3, "User aborted data transfer.");
 	},
 
@@ -666,11 +549,9 @@ catch(err){
 		let xmlReq = this.mXmlReq;
 
 		if (this.debug) this.logInfo(": ExchangeRequest.onLoad :"+evt.type+", readyState:"+xmlReq.readyState+", status:"+xmlReq.status);
-//		if (this.debug) this.logInfo(": ExchangeRequest.onLoad :"+xmlReq.responseText,2);
+		if (this.debug) this.logInfo(": ExchangeRequest.onLoad :"+xmlReq.responseText,2);
 
-		//this.exchangeStatistics.addDataRead(this.currentUrl, xmlReq.responseText.length);
-
-/*		if (xmlReq.readyState != 4) {
+		if (xmlReq.readyState != 4) {
 			if (this.debug) this.logInfo("readyState < 4. THIS SHOULD NEVER HAPPEN. PLEASE REPORT.");
 			return;
 		}
@@ -685,11 +566,22 @@ catch(err){
 
 		var xml = xmlReq.responseText; // bug 270553
 
-// Removed following as this is no longer a problem as we are not using E4X anymore.
-//		xml = xml.replace(/&#x10;/g, ""); // BUG 61 remove hexadecimal code 0x10. It will fail in xml conversion.
+		// It appears that in IIS7 it is possible the xml response is send in chunks with a length header.
+		// Try to detect this.
+
+/*		var header = xml.substr(0,6);
+		if (header.indexOf("\r\n") > -1) {
+			if (this.debug) this.logInfo("onLoad: Looks like we have a chunked response. Will try to unchunk it.");
+			xml = this.unchunk(xml);
+		}*/
+
+		xml = xml.replace(/^<\?xml\s+version\s*=\s*(?:"[^"]+"|'[^']+')[^?]*\?>/, ""); // bug 336551
+
+		xml = xml.replace(/&#x10;/g, ""); // BUG 61 remove hexadecimal code 0x10. It will fail in xml conversion.
 
 		try {
-			var newXML = new mivIxml2jxon('', 0, null);
+		    var newXML = Cc["@1st-setup.nl/conversion/xml2jxon;1"]
+				       .createInstance(Ci.mivIxml2jxon);
 		}
 		catch(exc) { if (this.debug) this.logInfo("createInstance error:"+exc);}
 
@@ -703,19 +595,19 @@ catch(err){
 		}
 		catch(exc) { if (this.debug) this.logInfo("processXMLString error:"+exc.name+", "+exc.message+"\n"+xml);} 
 
-//		dump("StringSize:"+xml.length+", xmlSize:"+newXML.getSize()+"\n");
-
 		this.mAuthFail = 0;
 		this.mRunning  = false;
+
+		var resp;
+		resp = newXML;
 
 		if (this.mCbOk) {
 			// Try to get server version and store it.
 			try {
-				let serverVersion = newXML.XPath("/s:Header/t:ServerVersionInfo");
+				var serverVersion = resp.XPath("/s:Header/t:ServerVersionInfo");
 				if ((serverVersion.length > 0) && (serverVersion[0].getAttribute("Version") != "")) {
 					this.exchangeStatistics.setServerVersion(this.currentUrl, serverVersion[0].getAttribute("Version"));
 				}
-				serverVersion[0] = null;
 				serverVersion = null;
 			}
 			catch(err) { }
@@ -726,14 +618,12 @@ catch(err){
 				exchWebService.prePasswords[this.mArgument.user+"@"+this.currentUrl].tryCount = 0;
 			}
 
-			this.mCbOk(this, newXML);
-			this.originalReq = null;
+			this.mCbOk(this, resp);
 		}
 
+		resp = null;
 		newXML = null;
 
-		this.observerService.notifyObservers(this._notificationCallbacks, "onExchangeConnectionOk", this.currentUrl);
-*/
 	},
 
 	retryCurrentUrl: function()
@@ -820,24 +710,12 @@ catch(err){
 
                                 if (this.debug) this.logInfo(": isConnError req.status="+xmlReq.status+": "+errMsg+"\nURL:"+this.currentUrl+"\n"+xmlReq.responseText, 2);
 
-				var myAuthPrompt2 = Cc["@1st-setup.nl/exchange/authprompt2;1"].getService(Ci.mivExchangeAuthPrompt2);
-				if ((this.urllist.length > 0) && (!myAuthPrompt2.getUserCanceled(this.currentUrl))) {
-					if (this.tryNextURL()) { 
-						return true;
-					}
-	 				this.fail(this.ER_ERROR_HTTP_ERROR4XX, "HTTP Client error "+xmlReq.status+": "+errMsg+"\nURL:"+this.currentUrl+"\n"+xmlReq.responseText.substr(0,300)+"\n\n");
-				}
-				else {
-					if (myAuthPrompt2.getUserCanceled(this.currentUrl)) {
-		 				this.fail(this.ER_ERROR_USER_ABORT_AUTHENTICATION,  "User canceled providing a valid password for url="+this.currentUrl+". Aborting this request.");
-					}
-					else {
-		 				this.fail(this.ER_ERROR_HTTP_ERROR4XX, "HTTP Client error "+xmlReq.status+": "+errMsg+"\nURL:"+this.currentUrl+"\n"+xmlReq.responseText.substr(0,300)+"\n\n");
-					}
+				if (this.tryNextURL()) {
+					return false;
 				}
 
+ 				this.fail(this.ER_ERROR_HTTP_ERROR4XX, "HTTP Client error "+xmlReq.status+": "+errMsg+"\nURL:"+this.currentUrl+"\n"+xmlReq.responseText.substr(0,300)+"\n\n");
                         	return true;
-
                         }
 
                         if ((xmlReq.status > 499) && (xmlReq.status < 600)) {
@@ -845,71 +723,6 @@ catch(err){
 				var errMsg = "";
 				switch (xmlReq.status) {
 				case 500: errMsg = "Internal server error"; 
-
-						// First check if we have a version mismatch and we need a lower version. This sometimes happens.
-						if (xmlReq.responseText.indexOf("ErrorInvalidServerVersion") > -1) {
-							if (this.debug) this.logInfo(" ErrorInvalidServerVersion -> RequestServerVersion wrong:"+this.version+".", 2);
-							// We are going to retry with a different serverversion.
-							var tryAgain = false;
-							switch(this.version) {
-							case "Exchange2010":
-								this.exchangeStatistics.setServerVersion(this.mArgument.serverUrl, "Exchange2007_SP1");
-								tryAgain = true;
-								break;
-							case "Exchange2010_SP1":
-								this.exchangeStatistics.setServerVersion(this.mArgument.serverUrl, "Exchange2010");
-								tryAgain = true;
-								break;
-							case "Exchange2010_SP2":
-								this.exchangeStatistics.setServerVersion(this.mArgument.serverUrl, "Exchange2010_SP1");
-								tryAgain = true;
-								break;
-							case "Exchange2013":
-								this.exchangeStatistics.setServerVersion(this.mArgument.serverUrl, "Exchange2010_SP2");
-								tryAgain = true;
-								break;
-							default:
-								tryAgain = false;
-							}
-							if (tryAgain) {
-								if (this.debug) this.logInfo("Going to retry with lower server version", 2);
-								this.sendRequest(this.makeSoapMessage(this.originalReq), this.currentUrl);
-								return true;
-							}
-						}
-
-						// First check if we have a version mismatch and we need a higher version. This sometimes happens.
-						if ((xmlReq.responseText.indexOf("ErrorIncorrectSchemaVersion") > -1) &&
-							(xmlReq.responseText.indexOf("RequestServerVersion") > -1) ) {
-							if (this.debug) this.logInfo(" ErrorIncorrectSchemaVersion -> RequestServerVersion wrong:"+this.version+".", 2);
-							// We are going to retry with a different serverversion.
-							var tryAgain = false;
-							switch(this.version) {
-							case "Exchange2007_SP1":
-								this.exchangeStatistics.setServerVersion(this.mArgument.serverUrl, "Exchange2010");
-								tryAgain = true;
-								break;
-							case "Exchange2010":
-								this.exchangeStatistics.setServerVersion(this.mArgument.serverUrl, "Exchange2010_SP1");
-								tryAgain = true;
-								break;
-							case "Exchange2010_SP1":
-								this.exchangeStatistics.setServerVersion(this.mArgument.serverUrl, "Exchange2010_SP2");
-								tryAgain = true;
-								break;
-							case "Exchange2010_SP2":
-								this.exchangeStatistics.setServerVersion(this.mArgument.serverUrl, "Exchange2013");
-								tryAgain = true;
-								break;
-							default:
-								tryAgain = false;
-							}
-							if (tryAgain) {
-								if (this.debug) this.logInfo("Going to retry with higher server version", 2);
-								this.sendRequest(this.makeSoapMessage(this.originalReq), this.currentUrl);
-								return true;
-							}
-						}
 
 						// This might be generated because of a password not yet supplied in open function during a request so we try again
 						//if ((this.prePassword == "") && 
@@ -979,7 +792,7 @@ catch(err){
                                 if (this.debug) this.logInfo(": isConnError req.status="+xmlReq.status+": "+errMsg+"\nURL:"+this.currentUrl+"\n"+xmlReq.responseText, 2);
 
 				if (this.tryNextURL()) {
-					return true;
+					return false;
 				}
 
  				this.fail(this.ER_ERROR_HTTP_ERROR4XX, "HTTP Server error "+xmlReq.status+": "+errMsg+"\nURL:"+this.currentUrl+"\n"+xmlReq.responseText.substr(0,300)+"\n\n");
@@ -987,7 +800,7 @@ catch(err){
                         }
 
 			if (this.tryNextURL()) {
-				return true;
+				return false;
 			}
                         // XXX parse it
  			this.fail(this.ER_ERROR_FROM_SERVER, "Unknown error from server"+xmlReq.status+": "+errMsg+"\nURL:"+this.currentUrl+"\n"+xmlReq.responseText.substr(0,300)+"\n\n");
@@ -1003,50 +816,19 @@ catch(err){
 		if (this.mCbError) {
 			this.mCbError(this, aCode, aMsg);
 		}
-		this.originalReq = null;
 	},
 
 	makeSoapMessage: function erMakeSoapMessage(aReq)
 	{
-		this.originalReq = aReq;
-
-		var msg = new mivIxml2jxon('<nsSoap:Envelope xmlns:nsSoap="'+nsSoapStr+'" xmlns:nsMessages="'+nsMessagesStr+'" xmlns:nsTypes="'+nsTypesStr+'"/>', 0, null);
-
-		this.version = this.exchangeStatistics.getServerVersion(this.mArgument.serverUrl);
-		
-		var header = msg.addChildTag("Header", "nsSoap", null);
+		var msg = exchWebService.commonFunctions.xmlToJxon('<nsSoap:Envelope xmlns:nsSoap="'+nsSoapStr+'" xmlns:nsMessages="'+nsMessagesStr+'" xmlns:nsTypes="'+nsTypesStr+'"/>');
 
 		if (this.mArgument.ServerVersion) {
-			header.addChildTag("RequestServerVersion", "nsTypes", null).setAttribute("Version", this.mArgument.ServerVersion);
+			msg.addChildTag("Header", "nsSoap", null).addChildTag("RequestServerVersion", "nsTypes", null).setAttribute("Version", this.mArgument.ServerVersion);
 		}
 		else {
-			header.addChildTag("RequestServerVersion", "nsTypes", null).setAttribute("Version", this.version);
+			msg.addChildTag("Header", "nsSoap", null).addChildTag("RequestServerVersion", "nsTypes", null).setAttribute("Version", this.exchangeStatistics.getServerVersion());
 		}
-		
-		var exchTimeZone = this.timeZones.getExchangeTimeZoneByCalTimeZone(this.globalFunctions.ecDefaultTimeZone(), this.mArgument.serverUrl, cal.now());
-
-		if (exchTimeZone) {
-				//exchTimeZone.timeZone.tagName = "TimeZoneDefinition";
-				//header.addChildTag("TimeZoneContext", "nsTypes", null).addChildTagObject(exchTimeZone.timeZone);
-
-				if (this.version.indexOf("2007") > -1) {
-					var tmpTimeZone = new mivIxml2jxon('<t:TimeZoneDefinition xmlns:m="'+nsMessagesStr+'" xmlns:t="'+nsTypesStr+'"/>',0,null);
-					tmpTimeZone.setAttribute("Id",exchTimeZone.id); 
-				}
-				else {
-					var tmpTimeZone = new mivIxml2jxon('<t:TimeZoneDefinition xmlns:m="'+nsMessagesStr+'" xmlns:t="'+nsTypesStr+'"/>',0,null);
-					tmpTimeZone.setAttribute("Name",exchTimeZone.name); 
-					tmpTimeZone.setAttribute("Id",exchTimeZone.id); 
-				}
-				header.addChildTag("TimeZoneContext", "nsTypes", null).addChildTagObject(tmpTimeZone);
-				tmpTimeZone = null;
-		}
-		header = null;
-
 		msg.addChildTag("Body", "nsSoap", null).addChildTagObject(aReq);
-
-//dump("Going to send1:"+msg.toString().length+", xml:"+msg.getSize()+"\n");
-//dump("Going to send2:"+msg.toString()+"\n");
 
 		var tmpStr = xml_tag + msg.toString();
 		msg = null;
@@ -1081,11 +863,7 @@ var ecPasswordErrorList = {};
 function ecnsIAuthPrompt2(aExchangeRequest)
 {
 	this.exchangeRequest = aExchangeRequest;
-
-	this.globalFunctions = Cc["@1st-setup.nl/global/functions;1"]
-				.getService(Ci.mivFunctions);
-	this.uuid = this.globalFunctions.getUUID();
-
+	this.uuid = exchWebService.commonFunctions.getUUID();
 	this.callback = null;
 	this.context = null;
 	this.level = null;
@@ -1151,7 +929,7 @@ ecnsIAuthPrompt2.prototype = {
 		} 
 
 		// The next iid is available sine TB 13.
-		if ((Ci.nsILoadContext) && (iid.equals(Ci.nsILoadContext))) {   // iid == 386806c3-c4cb-4b3d-b05d-c08ea10f5585 also exists as iid == 48b5bf16-e0c7-11e1-b28e-91726188709b
+		if ((Ci.nsILoadContext) && (iid.equals(Ci.nsILoadContext))) {   // iid == 386806c3-c4cb-4b3d-b05d-c08ea10f5585
 			this.logInfo("ecnsIAuthPrompt2.getInterface: Ci.nsILoadContext");
 			return Cr.NS_NOINTERFACE;  // We do not support this.
 		}
@@ -1162,7 +940,7 @@ ecnsIAuthPrompt2.prototype = {
 			return Cr.NS_NOINTERFACE;  // We do not support this.
 		}
 
-		this.globalFunctions.LOG("  >>>>>>>>>>> MAIL THIS LINE TO exchangecalendar@extensions.1st-setup.nl: ecnsIAuthPrompt2.getInterface("+iid+")");
+		exchWebService.commonFunctions.LOG("  >>>>>>>>>>> MAIL THIS LINE TO exchangecalendar@extensions.1st-setup.nl: ecnsIAuthPrompt2.getInterface("+iid+")");
 		throw Cr.NS_NOINTERFACE;
 	},
 
@@ -1276,9 +1054,9 @@ ecnsIAuthPrompt2.prototype = {
 		var prefB = Cc["@mozilla.org/preferences-service;1"]
 			.getService(Ci.nsIPrefBranch);
 
-		this.debug = this.globalFunctions.safeGetBoolPref(prefB, "extensions.1st-setup.authentication.debug", false, true);
+		this.debug = exchWebService.commonFunctions.safeGetBoolPref(prefB, "extensions.1st-setup.authentication.debug", false, true);
 		if (this.debug) {
-			this.globalFunctions.LOG(this.uuid+": "+aMsg);
+			exchWebService.commonFunctions.LOG(this.uuid+": "+aMsg);
 		}
 	},
 

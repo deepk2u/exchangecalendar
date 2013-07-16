@@ -88,7 +88,6 @@ erConvertIDRequest.prototype = {
 		this.parent.xml2jxon = true;
 
                 this.parent.sendRequest(this.parent.makeSoapMessage(req), this.serverUrl);
-		req = null;
 	},
 
 	onSendOk: function _onSendOk(aExchangeRequest, aResp)
@@ -122,7 +121,6 @@ erConvertIDRequest.prototype = {
 				aMsg = "Wrong response received.";
 			}
 		}
-		rm = null;
 
 		if (aError) {
 			this.onSendError(aExchangeRequest, aCode, aMsg);

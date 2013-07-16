@@ -91,8 +91,6 @@ function erFindCalendarItemsRequest(aArgument, aCbOk, aCbError, aListener)
 	this.occurrenceIds = [];
 	this.ids = [];
 
-	this.newStartDate = null;
-
 	this.isRunning = true;
 	this.execute();
 }
@@ -118,17 +116,11 @@ erFindCalendarItemsRequest.prototype = {
 		additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "item:Subject");
 
 		var view = exchWebService.commonFunctions.xmlToJxon('<nsMessages:CalendarView xmlns:nsMessages="'+nsMessagesStr+'" xmlns:nsTypes="'+nsTypesStr+'"/>');
-
-		if (this.newStartDate) {
-				view.setAttribute("StartDate", this.newStartDate);
+		if (this.rangeStart) {
+			view.setAttribute("StartDate", convDate(this.rangeStart));
 		}
 		else {
-			if (this.rangeStart) {
-				view.setAttribute("StartDate", convDate(this.rangeStart));
-			}
-			else {
-				view.setAttribute("StartDate", "1900-01-01T00:00:00-00:00");
-			}
+			view.setAttribute("StartDate", "1900-01-01T00:00:00-00:00");
 		}
 
 		if (this.rangeEnd) {
@@ -137,21 +129,18 @@ erFindCalendarItemsRequest.prototype = {
 		else {
 			view.setAttribute("EndDate", "2300-01-01T00:00:00-00:00");
 		}
-		view.setAttribute("MaxEntriesReturned", "25");
+		//view.setAttribute("MaxEntriesReturned", "15");
 
 		req.addChildTagObject(view);
-		view = null;
 
 		var parentFolder = makeParentFolderIds2("ParentFolderIds", this.argument);
 		req.addChildTagObject(parentFolder);
-		parentFolder = null;
 
 		this.parent.xml2jxon = true;
 
 		//exchWebService.commonFunctions.LOG("erFindCalendarItemsRequest.execute:"+String(this.parent.makeSoapMessage(req)));
 
                 this.parent.sendRequest(this.parent.makeSoapMessage(req), this.serverUrl);
-		req = null;
 	},
 
 	onSendOk: function _onSendOk(aExchangeRequest, aResp)
@@ -177,14 +166,11 @@ erFindCalendarItemsRequest.prototype = {
 		if (rm.length > 0) {
 			var rootFolder = rm[0].getTag("m:RootFolder");
 			if (rootFolder) {
-					if (this.newStartDate) exchWebService.commonFunctions.LOG("next run because previous did not contain all items.");
+				if (rootFolder.getAttribute("IncludesLastItemInRange") == "true") {
 					// Process results.
 					var calendarItems = rootFolder.XPath("/t:Items/t:CalendarItem");
 					for (var index in calendarItems) {
 						var uid = calendarItems[index].getTagValue("t:UID", "");
-
-						this.newStartDate = calendarItems[index].getTagValue("t:End");
-
 						switch (calendarItems[index].getTagValue("t:CalendarItemType")) {
 							case "Occurrence" :
 							case "Exception" :
@@ -210,30 +196,10 @@ erFindCalendarItemsRequest.prototype = {
 								break;
 						}
 					}
-					calendarItems = null;
-
-				if (rootFolder.getAttribute("IncludesLastItemInRange") == "true") {
-					// We are done.
-					exchWebService.commonFunctions.LOG("erFindCalendarItems: retrieved:"+rootFolder.getAttribute("TotalItemsInView")+" items. Includes last item in range.");
 				}
 				else {
-					// We return the result to be processed.
-					exchWebService.commonFunctions.LOG("erFindCalendarItems: retrieved:"+rootFolder.getAttribute("TotalItemsInView")+" items. Last item not in range so going for another run.");
-					if (this.mCbOk) {
-						var occurrenceList = [];
-						for (var index in this.occurrences) {
-							occurrenceList.push(this.occurrences[index]);
-						}
-						this.mCbOk(this, this.ids, occurrenceList);
-					}
-					this.recurringMasters = [];
-					this.occurrences = [];
-					this.occurrenceIds = [];
-					this.ids = [];
-
-					// Lets do a new request to the exchange server but with the startdate set to the last enddate.
-					this.execute(); 
-					return;
+					// We do not know how to handle this yet. Do not know if it ever happens. We did not restrict MaxEntriesReturned.
+					exchWebService.commonFunctions.LOG("PLEASE MAIL THIS LINE TO exchangecalendar@extensions.1st-setup.nl: IncludesLastItemInRange == false in FindItemResponse.");
 				}
 			}
 			else {
@@ -254,8 +220,6 @@ erFindCalendarItemsRequest.prototype = {
 				aMsg = "Wrong response received.";
 			}
 		}
-		
-		rm = null;
 
 		if (aError) {
 			this.onSendError(aExchangeRequest, aCode, aMsg);
@@ -268,8 +232,6 @@ erFindCalendarItemsRequest.prototype = {
 				}
 				this.mCbOk(this, this.ids, occurrenceList);
 			}
-			this.ids = null;
-			this.occurrences = null;
 			this.isRunning = false;
 		}
 		

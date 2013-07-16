@@ -1,7 +1,0 @@
-<!ENTITY exchWebService.owner.label "Ägare:">
-<!ENTITY exchWebService.totalWork.label "Total arbetstid:">
-<!ENTITY exchWebService.actualWork.label "Faktisk arbetstid:">
-<!ENTITY exchWebService.mileage.label "Körsträcka:">
-<!ENTITY exchWebService.billingInformation.label "Faktureringsinformation:">
-<!ENTITY exchWebService.companies.label "Företag:">
-

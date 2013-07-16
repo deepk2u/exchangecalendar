@@ -34,11 +34,7 @@
  *
  * ***** BEGIN LICENSE BLOCK *****/
 
-var Cc = Components.classes;
-var Ci = Components.interfaces;
 var Cu = Components.utils;
-var Cr = Components.results;
-var components = Components;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
@@ -48,6 +44,8 @@ Cu.import("resource://exchangecalendar/ecFunctions.js");
 Cu.import("resource://exchangecalendar/ecExchangeRequest.js");
 
 var EXPORTED_SYMBOLS = ["erAutoDiscoverRequest"];
+
+var nsAutodiscoverResponse = new Namespace("nsAutodiscoverResponse", "http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a");
 
 function erAutoDiscoverRequest(aArgument, aCbOk, aCbError, aListener)
 {
@@ -82,14 +80,6 @@ erAutoDiscoverRequest.prototype = {
                 var domain = parts[1];
 		exchWebService.commonFunctions.LOG("autodiscover email:"+email+", domain:"+domain+"\n");
 
-		var myAuthPrompt2 = Cc["@1st-setup.nl/exchange/authprompt2;1"].getService(Ci.mivExchangeAuthPrompt2);
-		myAuthPrompt2.removeUserCanceled("https://" + domain + "/autodiscover/autodiscover.xml");
-		myAuthPrompt2.removeUserCanceled("https://autodiscover." + domain + "/autodiscover/autodiscover.xml");
-		myAuthPrompt2.removeUserCanceled("http://autodiscover." + domain + "/autodiscover/autodiscover.xml");
-		myAuthPrompt2.removePasswordCache(null, "https://" + domain + "/autodiscover/autodiscover.xml");
-		myAuthPrompt2.removePasswordCache(null, "https://autodiscover." + domain + "/autodiscover/autodiscover.xml");
-		myAuthPrompt2.removePasswordCache(null, "http://autodiscover." + domain + "/autodiscover/autodiscover.xml");
-
 		this.parent.urllist = [
 			"https://" + domain + "/autodiscover/autodiscover.xml",
 			"https://autodiscover." + domain + "/autodiscover/autodiscover.xml",
@@ -100,12 +90,10 @@ erAutoDiscoverRequest.prototype = {
 		var request = req.addChildTag("Request", null, null);
 		request.addChildTag("EMailAddress", null, email);
 		request.addChildTag("AcceptableResponseSchema", null, "http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a");
-		request = null;
 
 		exchWebService.commonFunctions.LOG("sendAutodiscover.execute:"+req.toString()+"\n");
  		this.parent.xml2jxon = true;
 		this.parent.sendRequest(xml_tag + req.toString());
-		req = null;
 
 	},
 
@@ -114,28 +102,10 @@ erAutoDiscoverRequest.prototype = {
 		exchWebService.commonFunctions.LOG("sendAutodiscover.onSendOk:"+String(aResp));
 		var DisplayName = "";
 		var SMTPaddress = "";
-		var redirectAddr = null;
 		var ewsUrls = "";
 		var aError = true;
 		var aCode = -1;
 		var aMsg = String(aResp);
-
-		// Try to see if we get a redirectAddr Action
-		var account = aResp.XPath("/a1:Autodiscover/a2:Response/a2:Account[a2:Action ='redirectAddr']");
-		if (account.length > 0) {
-			// We have an redirectAddr. Send OK back but with the redirectAddr set.
-			redirectAddr = account[0].getTagValue("a2:RedirectAddr", null);
-			if ((this.mCbOk) && (redirectAddr)) {
-				//this.isRunning = false;
-				this.mCbOk(ewsUrls, DisplayName, SMTPaddress, redirectAddr);
-			}
-			if (aError) {
-				this.onSendError(aExchangeRequest, aCode, aMsg);
-			}
-			this.isRunning = false;
-			return;
-		}
-		account = null;
 
 		// Try to get the Displayname if it is available
 		var tag = aResp.XPath("/a1:Autodiscover/a2:Response/a2:User/a2:DisplayName");
@@ -145,7 +115,6 @@ erAutoDiscoverRequest.prototype = {
 		else {
 			exchWebService.commonFunctions.LOG("autodiscoverOk but Displayname is not available.");
 		}
-		tag = null;
 
 		// Try to get the SMTP address if it is available
 		var tag = aResp.XPath("/a1:Autodiscover/a2:Response/a2:User/a2:AutoDiscoverSMTPAddress");
@@ -155,7 +124,6 @@ erAutoDiscoverRequest.prototype = {
 		else {
 			exchWebService.commonFunctions.LOG("autodiscoverOk but AutoDiscoverSMTPAddress is not available.");
 		}
-		tag = null;
 
 		// Try to get the EWS urls if they are available
 		ewsUrls = aResp.XPath("/a1:Autodiscover/a2:Response/a2:Account/a2:Protocol[a2:Type='WEB']/*/a2:Protocol/a2:ASUrl");
@@ -181,11 +149,10 @@ erAutoDiscoverRequest.prototype = {
 		}
 		else {
 			if (this.mCbOk) {
-				this.mCbOk(ewsUrls, DisplayName, SMTPaddress, redirectAddr);
+				this.mCbOk(ewsUrls, DisplayName, SMTPaddress);
 			}
 		}
 		this.isRunning = false;
-		ewsUrls = null;
 	},
 
 	onSendError: function _onSendError(aExchangeRequest, aCode, aMsg)

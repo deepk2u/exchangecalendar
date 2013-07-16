@@ -31,20 +31,11 @@ var Cc = Components.classes;
 var Ci = Components.interfaces;
 var Cu = Components.utils;
 
-//Cu.import("resource://exchangecalendar/ecFunctions.js");
+Cu.import("resource://exchangecalendar/ecFunctions.js");
 
-//if (! exchWebService) var exchWebService = {};
+if (! exchWebService) var exchWebService = {};
 
-function exchProgressPanel(aDocument, aWindow)
-{
-	this._document = aDocument;
-	this._window = aWindow;
-
-	this.globalFunctions = Cc["@1st-setup.nl/global/functions;1"]
-				.getService(Ci.mivFunctions);
-}
-
-exchProgressPanel.prototype = {
+exchWebService.progressPanel = {
 
 	queueSizeTotal: 0,
 	calendarQueues: {},
@@ -64,45 +55,70 @@ exchProgressPanel.prototype = {
 
 	notify: function _notify() 
 	{
-		if (this.isLoaded) {
+		if (exchWebService.progressPanel.isLoaded) {
 
-			var jobList = this.loadBalancer.jobList;
+			var jobList = exchWebService.progressPanel.loadBalancer.jobList;
 			var running = 0;
 			var waiting = 0;
 
 			// Update the tooltip
-			var mainVBox = this._document.getElementById("exchWebServiceProgressvbox");
-			if (mainVBox) {
-				var grid;
+			var rows = document.getElementById("exchWebServices.progress.rows");
+			if (rows) {
+				var counter = 1;
+				var row;
 				var rowCount = 0;
 				for (var server in jobList) {
-					if (!this._document.getElementById("exchWebServiceProgress.progress.grid"+rowCount)) {
-						grid = this._document.createElement("exchangeProgressGrid");
-						grid.setAttribute("id","exchWebServiceProgress.progress.grid"+rowCount);
-						grid.setAttribute("serverUrl",server);
-						mainVBox.appendChild(grid);
+					if (!document.getElementById("exchWebServiceProgress.progress.row"+rowCount)) {
+						row = document.createElement("row");
+						row.setAttribute("id","exchWebServiceProgress.progress.row"+rowCount);
+						rows.appendChild(row);
 					}
 					else {
-						grid = this._document.getElementById("exchWebServiceProgress.progress.grid"+rowCount);
+						row = document.getElementById("exchWebServiceProgress.progress.row"+rowCount);
 					}
 
-					running = running + jobList[server].runningJobs.length;
-					if (grid.beforeUpdate) {
-						grid.serverCount = jobList[server].runningJobs.length;
-						grid.beforeUpdate();
+					var lineCount = 0;
+					var calLine;
+					if (!document.getElementById("exchWebServiceProgress.progress.row"+rowCount+".servercol.line"+lineCount)) {
+						var serverLine = document.createElement("label");
+						serverLine.setAttribute("id","exchWebServiceProgress.progress.row"+rowCount+".servercol.line"+lineCount);
+						serverLine.setAttribute("value",server+":"+jobList[server].runningJobs.length);
+						row.appendChild(serverLine);
+
+						calLine = document.createElement("vbox");
+						calLine.setAttribute("id","exchWebServiceProgress.progress.row"+rowCount+".calcol.line"+lineCount);
+						row.appendChild(calLine);
 					}
+					else {
+						document.getElementById("exchWebServiceProgress.progress.row"+rowCount+".servercol.line"+lineCount).setAttribute("value",server+":"+jobList[server].runningJobs.length);
+						document.getElementById("exchWebServiceProgress.progress.row"+rowCount+".servercol.line"+lineCount).hidden = false;
+
+						calLine = document.getElementById("exchWebServiceProgress.progress.row"+rowCount+".calcol.line"+lineCount);
+					}
+					running = running + jobList[server].runningJobs.length;
+
+
+					lineCount++;
 					for (var calendarid in jobList[server].jobs) {
 
 						var calendarName =  jobList[server].calendarNames[calendarid];
 
-						if (grid.addCalendar) {
-							grid.addCalendar(jobList[server].calendarNames[calendarid], jobList[server].jobs[calendarid].length);
+						if (!document.getElementById("exchWebServiceProgress.progress.row"+rowCount+".servercol.line"+lineCount)) {
+							var line=document.createElement("label");
+							line.setAttribute("id","exchWebServiceProgress.progress.row"+rowCount+".servercol.line"+lineCount);
+							line.setAttribute("value",calendarName+":"+jobList[server].jobs[calendarid].length);
+							calLine.appendChild(line);
 						}
-
+						else {
+							document.getElementById("exchWebServiceProgress.progress.row"+rowCount+".servercol.line"+lineCount).setAttribute("value", calendarName+":"+jobList[server].jobs[calendarid].length);
+							document.getElementById("exchWebServiceProgress.progress.row"+rowCount+".servercol.line"+lineCount).hidden = false;
+						}
 						waiting = waiting +jobList[server].jobs[calendarid].length; 
+						lineCount++;							
 					}
-					if (grid.afterUpdate) {
-						grid.afterUpdate();
+					while (document.getElementById("exchWebServiceProgress.progress.row"+rowCount+".servercol.line"+lineCount)) {
+						document.getElementById("exchWebServiceProgress.progress.row"+rowCount+".servercol.line"+lineCount).hidden = true;
+						lineCount++;
 					}
 
 					rowCount++;
@@ -111,36 +127,32 @@ exchProgressPanel.prototype = {
 			}
 
 			if ((waiting == 0) && (running == 0)) {
-				this._document.getElementById("exchWebService-progress-panel").hidden = true;
-				this.timer.cancel();
-				this.timerRunning = false;
+				document.getElementById("exchWebService-progress-panel").hidden = true;
+				exchWebService.progressPanel.timer.cancel();
+				exchWebService.progressPanel.timerRunning = false;
 			}
 			else {
-				if (this._document.getElementById("exchWebService-progress-panel").hidden) {
+				if (document.getElementById("exchWebService-progress-panel").hidden) {
 					if ((waiting > 1) || (running > 0)) {
-						this._document.getElementById("exchWebService-progress-panel").hidden = false;
-						if (!this.timerRunning) {
-							this.timerRunning = true;
-							this.timer.initWithCallback(this, 200, this.timer.TYPE_REPEATING_SLACK);
-						}
+						document.getElementById("exchWebService-progress-panel").hidden = false;
+						exchWebService.progressPanel.timer.initWithCallback(exchWebService.progressPanel, 200, exchWebService.progressPanel.timer.TYPE_REPEATING_SLACK);
 					}
 				}
-//				var tmpStr = running + "/" + waiting + " (r/w job";
-				var tmpStr = running + " running & " + waiting + " queued job";
+				var tmpStr = running + "/" + waiting + " (r/w job";
 				if ((waiting+running) > 1) {
 					tmpStr = tmpStr + "s";
 				}
-//				tmpStr = tmpStr + ")";
-				this._document.getElementById("exchWebService-progress-label").value = tmpStr;
+				tmpStr = tmpStr + ")";
+				document.getElementById("exchWebService-progress-label").value = tmpStr;
 			}
 
 
-			this.imageCounter = Number(this.imageCounter) + Number(1);
-			if (this.imageCounter > 4) {
-				this.imageCounter = 1;
+			exchWebService.progressPanel.imageCounter = Number(exchWebService.progressPanel.imageCounter) + Number(1);
+			if (exchWebService.progressPanel.imageCounter > 4) {
+				exchWebService.progressPanel.imageCounter = 1;
 			}
-			if (this._document) {
-				this._document.getElementById("exchWebService-progress-image").style.listStyleImage = "url('"+this.imageList["image"+this.imageCounter]+"')";
+			if (document) {
+				document.getElementById("exchWebService-progress-image").style.listStyleImage = "url('"+exchWebService.progressPanel.imageList["image"+exchWebService.progressPanel.imageCounter]+"')";
 			}
 		}
 	},
@@ -154,43 +166,56 @@ exchProgressPanel.prototype = {
 		}
 
 		if (topic == "onExchangeProgressChange") {
-			if ((!this.timerRunning) && (!this.timerRunning)) {
-				this.timerRunning = true;
-				this.timer.initWithCallback(this, 200, this.timer.TYPE_REPEATING_SLACK);
+			if (!exchWebService.progressPanel.timerRunning) {
+				exchWebService.progressPanel.timerRunning = true;
+				exchWebService.progressPanel.timer.initWithCallback(exchWebService.progressPanel, 200, exchWebService.progressPanel.timer.TYPE_REPEATING_SLACK);
 			}
 		}
         },
 
 	init: function _init()
 	{
-		this.observerService = Cc["@mozilla.org/observer-service;1"]  
+		exchWebService.progressPanel.observerService = Cc["@mozilla.org/observer-service;1"]  
                           .getService(Ci.nsIObserverService);
 
-		this.observerService.addObserver(this, "onExchangeProgressChange", false);
-		this.observerService.addObserver(this, "onExchangeReadOnlyChange", false);
+		exchWebService.progressPanel.observerService.addObserver(exchWebService.progressPanel, "onExchangeProgressChange", false);
+		exchWebService.progressPanel.observerService.addObserver(exchWebService.progressPanel, "onExchangeReadOnlyChange", false);
 
-		this.timer = Cc["@mozilla.org/timer;1"]
+		exchWebService.progressPanel.timer = Cc["@mozilla.org/timer;1"]
 				.createInstance(Ci.nsITimer);
-		this.timerRunning = false;
+		exchWebService.progressPanel.timerRunning = false;
 
 	},
 
 	destroy: function _destroy()
 	{
-		this.observerService.removeObserver(this, "onExchangeProgressChange");
-		this.observerService.removeObserver(this, "onExchangeReadOnlyChange");
+		exchWebService.progressPanel.observerService.removeObserver(exchWebService.progressPanel, "onExchangeProgressChange");
+		exchWebService.progressPanel.observerService.removeObserver(exchWebService.progressPanel, "onExchangeReadOnlyChange");
+	},
+
+	loaded: function ecProgressPanel_loaded()
+	{
+		exchWebService.progressPanel.isLoaded = true;
 	},
 
 	onLoad: function _onLoad(event) {
-		this.init();
+
+		// nuke the onload, or we get called every time there's
+		// any load that occurs
+		document.removeEventListener("load", exchWebService.progressPanel.onLoad, true);
 
 		// Do init
-		this.isLoaded = true;
+		exchWebService.progressPanel.loaded();
 
 		// Add an unload function to the window so we don't leak any listeners
-		var self = this;
-		this._window.addEventListener("unload", function(){ self._window.removeEventListener("unload",arguments.callee,false); self.destroy();}, false);
+		window.addEventListener("unload", exchWebService.progressPanel.onFinish, false);
 
+
+	},
+
+	onFinish: function _onFinish() {
+		// Do some cleanup
+		exchWebService.progressPanel.destroy();
 	},
 
 	openProgressDialog: function _openProgressDialog()
@@ -198,16 +223,5 @@ exchProgressPanel.prototype = {
 	},
 }
 
-var myExchProgressPanel = new exchProgressPanel(document, window);
-window.addEventListener("load", function () { window.removeEventListener("load",arguments.callee,true); dump("progress_panel\n"); myExchProgressPanel.onLoad(); }, true);
-
-/**
- * Creates the given element in the XUL namespace.
- *
- * @param el    The local name of the element to create.
- * @return      The XUL element requested.
- */
-function createXULElement(el) {
-    return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
-}
-
+exchWebService.progressPanel.init();
+document.addEventListener("load", exchWebService.progressPanel.onLoad, true);

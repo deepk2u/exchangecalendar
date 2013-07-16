@@ -20,11 +20,7 @@
  *
  *
  * ***** BEGIN LICENSE BLOCK *****/
-var Cc = Components.classes;
-var Ci = Components.interfaces;
 var Cu = Components.utils;
-var Cr = Components.results;
-var components = Components;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
@@ -89,14 +85,6 @@ erSyncContactsFolderRequest.prototype = {
 		additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "item:Subject");
 //		additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "folder:DisplayName"); // Not allowed for this request
 
-		this.exchangeStatistics = Cc["@1st-setup.nl/exchange/statistics;1"]
-				.getService(Ci.mivExchangeStatistics);
-
-		if ((this.exchangeStatistics.getServerVersion(this.serverUrl).indexOf("2007") == -1) &&
-		    (this.exchangeStatistics.getServerVersion(this.serverUrl).indexOf("2010_SP1") == -1)){
-			additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "contacts:Photo");
-		}
-
 		var extendedFieldURI = additionalProperties.addChildTag("ExtendedFieldURI", "nsTypes", null);
 		extendedFieldURI.setAttribute("DistinguishedPropertySetId", "Common");
 		extendedFieldURI.setAttribute("PropertyId", MAPI_PidTagBody);
@@ -104,7 +92,6 @@ erSyncContactsFolderRequest.prototype = {
 
 		var parentFolder = makeParentFolderIds2("SyncFolderId", this.argument);
 		req.addChildTagObject(parentFolder);
-		parentFolder = null;
 	
 		if (aSyncState) {
 			req.addChildTag("SyncState", "nsMessages", aSyncState);
@@ -116,7 +103,6 @@ erSyncContactsFolderRequest.prototype = {
 
 		//exchWebService.commonFunctions.LOG("erSyncContactsFolderRequest.execute:"+String(this.parent.makeSoapMessage(req))+"\n");
                 this.parent.sendRequest(this.parent.makeSoapMessage(req), this.serverUrl);
-		req = null;
 	},
 
 	onSendOk: function _onSendOk(aExchangeRequest, aResp)
@@ -168,8 +154,6 @@ erSyncContactsFolderRequest.prototype = {
 				this.deletions.contacts.push(deleted);
 			}
 
-			rm = null;
-
 			if (lastItemInRange == "false") {
 				this.execute(syncState);
 				return;
@@ -182,7 +166,6 @@ erSyncContactsFolderRequest.prototype = {
 			}
 		}
 		else {
-			rm = null;
 			this.onSendError(aExchangeRequest, this.parent.ER_ERROR_SYNCFOLDERITEMS_UNKNOWN, "Error during erSyncContactsFolderRequest");
 			return;
 		}

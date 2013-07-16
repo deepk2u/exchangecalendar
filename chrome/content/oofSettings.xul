@@ -39,10 +39,6 @@
 -->
 
 <?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
-<?xml-stylesheet href="chrome://global/skin/xul.css" type="text/css"?>
-<?xml-stylesheet href="chrome://messenger/skin/messengercompose/messengercompose.css" type="text/css"?>
-<?xml-stylesheet href="chrome://exchangecalendar/content/oofSettings.css" type="text/css"?>
-<?xml-stylesheet href="chrome://exchangecalendar/content/exchWebServiceEditor.css" type="text/css"?>
 
 <!DOCTYPE dialog [
     <!ENTITY % dtd1 SYSTEM "chrome://exchangecalendar/locale/oofSettings.dtd" > %dtd1;
@@ -55,15 +51,13 @@
   buttons="cancel"
   buttonlabelaccept="&label.acceptbutton;"
   buttonlabelcancel="&label.cancelbutton;"
-  ondialogaccept="return tmpOOFSettings.onSave();"
-	height="600px"
-	persist="width height"
->
+  ondialogaccept="return exchWebService.oofSettings.onSave();"
+  onload="exchWebService.oofSettings.onLoad();">
 
 	<script type="application/javascript" src="chrome://exchangecalendar/content/oofSettings.js"/>
 
 	<commandset>
-		<command id="exchWebService_cmd_oof_scheduled" oncommand="tmpOOFSettings.doScheduledChanged();"/>
+		<command id="exchWebService_cmd_oof_scheduled" oncommand="exchWebService.oofSettings.doScheduledChanged();"/>
 	</commandset>
 
 	<hbox>
@@ -72,7 +66,7 @@
 		<label id="exchWebService-load-error-message"/>
 	</hbox>
 
-	<vbox id="vbox-exchWebService-oof-settings" disabled="true" flex="1">
+	<vbox id="vbox-exchWebService-oof-settings" disabled="true">
 		<hbox align="center">
 			<label value="&label.oofstatus;"/>
 			<menulist label="(Make a choice)" id="exchWebService-oof-status" value="1">
@@ -117,25 +111,33 @@
 			</grid>
 		</vbox>
 
-		<spacer/>
+		<spacer flex="2"/>
 
 		<tabbox flex="1">
 			<tabs>
-				<tab label="&button.label.internal;" selected="true" flex="1"/>
-				<tab label="&button.label.external;" flex="1"/>
+				<tab label="&button.label.internal;" selected="true"/>
+				<tab label="&button.label.external;"/>
 			</tabs>
 			<tabpanels flex="1">
-				<tabpanel id="exchWebService-internalreply" flex="1">
-					<vbox flex="1">
-						<label id="exchWebService-oof-label-internal" value="&label.internalreply;" />
-						<oofEditor id="exchWebService-oof-editor-internal" flex="1"/>
-					</vbox> 
+				<tabpanel id="exchWebService-internalreply">
+					<rows>					
+						<row>
+							<label id="exchWebService-oof-label-internal" value="&label.internalreply;" />
+						</row>	
+						<row>
+						 	<textbox id="exchWebService-oof-textbox-internal" value="" multiline="true" rows="15" cols="80"/>
+						</row> 
+					</rows> 				
 				</tabpanel>
-				<tabpanel id="exchWebService-externalreply" flex="1">
-					<vbox flex="1">
-						<label id="exchWebService-oof-label-external" value="&label.externalreply;" />
-						<oofEditor id="exchWebService-oof-editor-external" flex="1"/>
-					</vbox> 
+				<tabpanel id="exchWebService-internalreply">
+					<rows>					
+						<row>
+							<label id="exchWebService-oof-label-external" value="&label.externalreply;"/>
+						</row>	
+						<row>
+						 	<textbox id="exchWebService-oof-textbox-external" value="" multiline="true" rows="15" cols="80"/>
+						</row> 
+					</rows> 
 				</tabpanel>
 			</tabpanels>
 		</tabbox>

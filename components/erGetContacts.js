@@ -20,11 +20,7 @@
  *
  *
  * ***** BEGIN LICENSE BLOCK *****/
-var Cc = Components.classes;
-var Ci = Components.interfaces;
 var Cu = Components.utils;
-var Cr = Components.results;
-var components = Components;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
@@ -74,26 +70,10 @@ erGetContactsRequest.prototype = {
 		itemShape.addChildTag("BaseShape", "nsTypes", "AllProperties");		
 		itemShape.addChildTag("BodyType", "nsTypes", "Text");
 
-		var additionalProperties = itemShape.addChildTag("AdditionalProperties", "nsTypes", null);
-		additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "contacts:HasPicture");
-		additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "item:HasAttachments");
-		additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "item:Attachments");
-		additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "item:EffectiveRights");
-
-		this.exchangeStatistics = Cc["@1st-setup.nl/exchange/statistics;1"]
-				.getService(Ci.mivExchangeStatistics);
-
-		if ((this.exchangeStatistics.getServerVersion(this.serverUrl).indexOf("2007") == -1) &&
-		    (this.exchangeStatistics.getServerVersion(this.serverUrl).indexOf("2010_SP1") == -1)){
-			additionalProperties.addChildTag("FieldURI", "nsTypes", null).setAttribute("FieldURI", "contacts:Photo");
-		}
-
-		var extendedFieldURI = additionalProperties.addChildTag("ExtendedFieldURI", "nsTypes", null);
+		var extendedFieldURI = itemShape.addChildTag("AdditionalProperties", "nsTypes", null).addChildTag("ExtendedFieldURI", "nsTypes", null);
 		extendedFieldURI.setAttribute("DistinguishedPropertySetId", "Common");
 		extendedFieldURI.setAttribute("PropertyId", MAPI_PidTagBody);
 		extendedFieldURI.setAttribute("PropertyType", "String");
-		itemids = null;
-		itemids = null;
 
 		var itemids = req.addChildTag("ItemIds", "nsMessages", null);
 		for each (var item in this.ids) {
@@ -102,16 +82,12 @@ erGetContactsRequest.prototype = {
 			if (item.ChangeKey) {
 				itemId.setAttribute("ChangeKey", item.ChangeKey);
 			}
-			itemId = null;
 		}
-		itemids = null;
 
 		this.parent.xml2jxon = true;
 
 		//exchWebService.commonFunctions.LOG("erGetContactsRequest.execute:"+String(this.parent.makeSoapMessage(req)));
                 this.parent.sendRequest(this.parent.makeSoapMessage(req), this.serverUrl);
-		req = null;
-		itemShape = null;
 	},
 
 	onSendOk: function _onSendOk(aExchangeRequest, aResp)

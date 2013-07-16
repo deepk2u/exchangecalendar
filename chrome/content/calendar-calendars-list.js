@@ -39,16 +39,11 @@ var Cu = Components.utils;
 var Cr = Components.results;
 var components = Components;
 
-function exchCalPopUpMenu(aDocument, aWindow)
-{
-	this._document = aDocument;
-	this._window = aWindow;
+Cu.import("resource://exchangecalendar/ecFunctions.js");
 
-	this.globalFunctions = Cc["@1st-setup.nl/global/functions;1"]
-				.getService(Ci.mivFunctions);
-}
+if (! exchWebService) var exchWebService = {};
 
-exchCalPopUpMenu.prototype = {
+exchWebService.calPopUpMenu = {
 
 	editExchangeSettings: function _editExchangeSettings()
 	{
@@ -56,7 +51,7 @@ exchCalPopUpMenu.prototype = {
 		var aResult = "";
 		if (myCal) {
 			var aResult = { calendar: myCal, answer: ""};
-			this._window.openDialog("chrome://exchangecalendar/content/exchangeSettings.xul",
+			window.openDialog("chrome://exchangecalendar/content/exchangeSettings.xul",
 				"exchangeSettings",
 				"chrome,titlebar,toolbar,centerscreen,dialog,modal=yes,resizable=no",
 				aResult); 
@@ -69,7 +64,7 @@ exchCalPopUpMenu.prototype = {
 		var aResult = "";
 		if (myCal) {
 			var aResult = { calendar: myCal, answer: ""};
-			this._window.openDialog("chrome://exchangecalendar/content/oofSettings.xul",
+			window.openDialog("chrome://exchangecalendar/content/oofSettings.xul",
 				"oofSettings",
 				"chrome,titlebar,toolbar,centerscreen,dialog,modal=yes,resizable=yes",
 				aResult); 
@@ -81,35 +76,35 @@ exchCalPopUpMenu.prototype = {
 		var myCal = getSelectedCalendar();
 		if (myCal) {
 			if (myCal.type == "exchangecalendar") {
-				this._document.getElementById("exchWebService-list-calendars-context-convertFromOldAddOn").disabled = true;
-				this._document.getElementById("exchWebService-list-calendars-context-convertFromOldAddOn").hidden = true;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-edit").disabled = false;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-oof-settings").disabled = false;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-clone-settings").disabled = false;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-edit").hidden = false;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-oof-settings").hidden = false;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-clone-settings").hidden = false;
+				document.getElementById("exchWebService-list-calendars-context-convertFromOldAddOn").disabled = true;
+				document.getElementById("exchWebService-list-calendars-context-convertFromOldAddOn").hidden = true;
+				document.getElementById("exchWebService-list-calendars-context-exchange-edit").disabled = false;
+				document.getElementById("exchWebService-list-calendars-context-exchange-oof-settings").disabled = false;
+				document.getElementById("exchWebService-list-calendars-context-exchange-clone-settings").disabled = false;
+				document.getElementById("exchWebService-list-calendars-context-exchange-edit").hidden = false;
+				document.getElementById("exchWebService-list-calendars-context-exchange-oof-settings").hidden = false;
+				document.getElementById("exchWebService-list-calendars-context-exchange-clone-settings").hidden = false;
 				myCal.getProperty("exchWebService.checkFolderPath");
 			}
 			else if (myCal.type == "exchange") {
-				this._document.getElementById("exchWebService-list-calendars-context-convertFromOldAddOn").disabled = false;
-				this._document.getElementById("exchWebService-list-calendars-context-convertFromOldAddOn").hidden = false;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-edit").disabled = true;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-oof-settings").disabled = true;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-clone-settings").disabled = true;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-edit").hidden = true;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-oof-settings").hidden = true;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-clone-settings").hidden = true;
+				document.getElementById("exchWebService-list-calendars-context-convertFromOldAddOn").disabled = false;
+				document.getElementById("exchWebService-list-calendars-context-convertFromOldAddOn").hidden = false;
+				document.getElementById("exchWebService-list-calendars-context-exchange-edit").disabled = true;
+				document.getElementById("exchWebService-list-calendars-context-exchange-oof-settings").disabled = true;
+				document.getElementById("exchWebService-list-calendars-context-exchange-clone-settings").disabled = true;
+				document.getElementById("exchWebService-list-calendars-context-exchange-edit").hidden = true;
+				document.getElementById("exchWebService-list-calendars-context-exchange-oof-settings").hidden = true;
+				document.getElementById("exchWebService-list-calendars-context-exchange-clone-settings").hidden = true;
 			}
 			else {
-				this._document.getElementById("exchWebService-list-calendars-context-convertFromOldAddOn").disabled = true;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-edit").disabled = true;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-oof-settings").disabled = true;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-clone-settings").disabled = true;
-				this._document.getElementById("exchWebService-list-calendars-context-convertFromOldAddOn").hidden = true;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-edit").hidden = true;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-oof-settings").hidden = true;
-				this._document.getElementById("exchWebService-list-calendars-context-exchange-clone-settings").hidden = true;
+				document.getElementById("exchWebService-list-calendars-context-convertFromOldAddOn").disabled = true;
+				document.getElementById("exchWebService-list-calendars-context-exchange-edit").disabled = true;
+				document.getElementById("exchWebService-list-calendars-context-exchange-oof-settings").disabled = true;
+				document.getElementById("exchWebService-list-calendars-context-exchange-clone-settings").disabled = true;
+				document.getElementById("exchWebService-list-calendars-context-convertFromOldAddOn").hidden = true;
+				document.getElementById("exchWebService-list-calendars-context-exchange-edit").hidden = true;
+				document.getElementById("exchWebService-list-calendars-context-exchange-oof-settings").hidden = true;
+				document.getElementById("exchWebService-list-calendars-context-exchange-clone-settings").hidden = true;
 			}
 		}
 	},
@@ -124,13 +119,13 @@ exchCalPopUpMenu.prototype = {
 			    .getBranch("calendar.registry."+uuid+".");
 		
 		// Get the name of the calendar. Is for in the prompt.
-		var calName = this.globalFunctions.safeGetCharPref(currentPrefs,"name", "");
+		var calName = exchWebService.commonFunctions.safeGetCharPref(currentPrefs,"name", "");
 								
 		var prompts = Cc["@mozilla.org/embedcomp/prompt-service;1"].  
 			getService(Ci.nsIPromptService);  
 		
 		// Get mail address from imip identity key
-		var identity = this.globalFunctions.safeGetCharPref(currentPrefs,"imip.identity.key", "");
+		var identity = exchWebService.commonFunctions.safeGetCharPref(currentPrefs,"imip.identity.key", "");
 		if (identity != "") {
 			var exchWebServicesIdentityprefs = Cc["@mozilla.org/preferences-service;1"]
         	            .getService(Ci.nsIPrefService)
@@ -147,7 +142,7 @@ exchCalPopUpMenu.prototype = {
 			// We have a entry for the old Exchange Provider.
 		
 			// We need to get the uri
-			var uri = this.globalFunctions.safeGetCharPref(currentPrefs,"uri", "");
+			var uri = exchWebService.commonFunctions.safeGetCharPref(currentPrefs,"uri", "");
 			if (uri != "") {
 				// We have a uri. Check for domainname and username.
 				var ioService = Components.classes["@mozilla.org/network/io-service;1"]  
@@ -158,9 +153,9 @@ exchCalPopUpMenu.prototype = {
 					var domainname = username.substr(0, username.indexOf("\\"));
 					username = username.substr(username.indexOf("\\")+1);
 				}
-				this.globalFunctions.LOG("username:"+username);
-				this.globalFunctions.LOG("domainname:"+domainname);
-				this.globalFunctions.LOG("url:"+tmpURI.scheme+"://"+tmpURI.hostPort+tmpURI.path);
+				exchWebService.commonFunctions.LOG("username:"+username);
+				exchWebService.commonFunctions.LOG("domainname:"+domainname);
+				exchWebService.commonFunctions.LOG("url:"+tmpURI.scheme+"://"+tmpURI.hostPort+tmpURI.path);
 								
 				var newPrefs = Cc["@mozilla.org/preferences-service;1"]
 					                    .getService(Ci.nsIPrefService)
@@ -186,11 +181,11 @@ exchCalPopUpMenu.prototype = {
 				Application.restart();
 			}
 			else {
-				this.globalFunctions.LOG(calName+": Wrong empty uri.");
+				exchWebService.commonFunctions.LOG(calName+": Wrong empty uri.");
 			}
 		}
 		else {
-			this.globalFunctions.LOG("migrateFromOldExchangeProvider: Calendar '"+calName+"' is skipped.");
+			exchWebService.commonFunctions.LOG("migrateFromOldExchangeProvider: Calendar '"+calName+"' is skipped.");
 		}
 	},
 
@@ -200,54 +195,17 @@ exchCalPopUpMenu.prototype = {
 		var aResult = "";
 		if (myCal) {
 			var aResult = { calendar: myCal, answer: ""};
-			this._window.openDialog("chrome://exchangecalendar/content/exchangeCloneSettings.xul",
+			window.openDialog("chrome://exchangecalendar/content/exchangeCloneSettings.xul",
 				"exchangeCloneSettings",
 				"chrome,titlebar,toolbar,centerscreen,dialog,modal=yes,resizable=no",
 				aResult); 
 
 			if (aResult.answer == "saved") {
 				// Tell the Calendar Manager we have a new calendar.
-				this.globalFunctions.addCalendarById(aResult.newCalId);
+				exchWebService.commonFunctions.addCalendarById(aResult.newCalId);
 			}
 		}
-	},
-
-	onLoad: function _onLoad()
-	{
-		//this._document.getElementById("calendar-list-tree-widget").setAttribute("type", "exchange");
-	},
-
-	tooltipShowing: function _tooltipShowing(aEvent)
-	{
-		let tree = document.getElementById("calendar-list-tree-widget");
-		let calendar = tree.getCalendarFromEvent(aEvent);
-		let tooltipText = false;
-		if ((calendar) && (calendar.type == "exchangecalendar")) {
-			let exchangeCurrentStatus = calendar.getProperty("exchangeCurrentStatus");
-			if ((!Components.isSuccessCode(exchangeCurrentStatus)) || (calendar.getProperty("disabled"))) {
-				if (calendar.readOnly) {
-					tooltipText = this.globalFunctions.getString("calExchangeCalendar", "tooltipCalendarDisconnectedReadOnly", [calendar.name, calendar.connectionStateDescription], "exchangecalendar");
-				}
-				else {
-					tooltipText = this.globalFunctions.getString("calExchangeCalendar", "tooltipCalendarDisconnected", [calendar.name, calendar.connectionStateDescription], "exchangecalendar");
-				}
-			} else {
-				if (calendar.readOnly) {
-					tooltipText = this.globalFunctions.getString("calExchangeCalendar", "tooltipCalendarConnectedReadOnly", [calendar.name], "exchangecalendar");
-				}
-				else {
-					tooltipText = this.globalFunctions.getString("calExchangeCalendar", "tooltipCalendarConnected", [calendar.name], "exchangecalendar");
-				}
-			}
-			setElementValue("calendar-list-tooltip", tooltipText, "label");
-		}
-		if (tooltipText) {
-			return (tooltipText != false);
-		}
-		return calendarListTooltipShowing(aEvent);
 	},
 
 }
 
-var tmpCalPopUpMenu = new exchCalPopUpMenu(document, window);
-window.addEventListener("load", function () { window.removeEventListener("load",arguments.callee,false); tmpCalPopUpMenu.onLoad(); }, true);

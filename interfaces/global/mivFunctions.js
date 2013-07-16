@@ -30,8 +30,6 @@ var components = Components;
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource:///modules/Services.jsm");
 
-Cu.import("resource://interfaces/xml2jxon/mivIxml2jxon.js");
-
 function mivFunctions()
 {
 	//dump("\n ++ mivFunctions.init\n");
@@ -41,12 +39,28 @@ mivFunctions.prototype = {
 
 	// methods from nsISupport
 
+	_refCount: 0,
+
+	//nsrefcnt AddRef();
+	AddRef: function _AddRef()
+	{
+		this._refCount++;
+		return this._refCount;
+	},
+
 	/* void QueryInterface(
 	  in nsIIDRef uuid,
 	  [iid_is(uuid),retval] out nsQIResult result
 	);	 */
 	QueryInterface: XPCOMUtils.generateQI([Ci.mivFunctions,
 			Ci.nsISupports]),
+
+	//nsrefcnt Release();
+	Release: function _Release()
+	{
+		this._refCount--;
+		return this._refCount;
+	},
 
 	// Attributes from nsIClassInfo
 
@@ -55,6 +69,7 @@ mivFunctions.prototype = {
 	contractID: "@1st-setup.nl/global/functions;1",
 	flags: Ci.nsIClassInfo.SINGLETON || Ci.nsIClassInfo.THREADSAFE,
 	implementationLanguage: Ci.nsIProgrammingLanguage.JAVASCRIPT,
+
 
 	doEncodeFolderSpecialChars: function _doEncodeFolderSpecialChars(str, r1)
 	{
@@ -363,12 +378,11 @@ mivFunctions.prototype = {
  * Make a UUID using the UUIDGenerator service available, we'll use that.
  */
 	getUUID: function _getUUID() {
+	    var uuidGen = Cc["@mozilla.org/uuid-generator;1"]
+	                  .getService(Ci.nsIUUIDGenerator);
 	    // generate uuids without braces to avoid problems with
-		if (!this.uuidGen) {
-			this.uuidGen = Cc["@mozilla.org/uuid-generator;1"]
-					.getService(Ci.nsIUUIDGenerator);
-		}
-		return this.uuidGen.generateUUID().toString().replace(/[{}]/g, '');
+	    // CalDAV servers that don't support filenames with {}
+	    return uuidGen.generateUUID().toString().replace(/[{}]/g, '');
 	},
 
 
@@ -534,7 +548,7 @@ mivFunctions.prototype = {
 	STACKshort: function _STACKshort() {
 
 	    let depth = 1;
-	    let skip = 1;
+	    let skip = 3;
 	    let stack = "";
 	    let frame = components.stack.caller;
 	    for (let i = 1; i <= depth + skip && frame; i++) {
@@ -644,53 +658,25 @@ mivFunctions.prototype = {
 
 	xmlToJxon: function _xmlToJxon(aXMLString) 
 	{
-		if ((!aXMLString) || (aXMLString == "")) { return null;}
-		
-		try {
-			var result = new mivIxml2jxon(aXMLString, 0, null);
-		}
-		catch(exc) {
-			this.LOG("xmlToJxon: Error processXMLString:"+exc+".("+aXMLString+")");
-			result = null;
+		var result = Cc["@1st-setup.nl/conversion/xml2jxon;1"]
+				.createInstance(Ci.mivIxml2jxon);
+		if ((result) && (aXMLString) && (aXMLString != ""))	{
+			try {
+				result.processXMLString(aXMLString, 0, null);
+			}
+			catch(exc) {
+				this.LOG("xmlToJxon: Error processXMLString:"+exc+".("+aXMLString+")");
+				result = null;
+			}
 		}
 
 		return result;
 	},
 
-	urlToPath: function _urlToPath(aPath) 
-	{
-
-		if (!aPath || !/^file:/.test(aPath))
-			return ;
-		var rv;
-		var ph = Cc["@mozilla.org/network/protocol;1?name=file"]
-				.createInstance(Ci.nsIFileProtocolHandler);
-		rv = ph.getFileFromURLSpec(aPath).path;
-		return rv;
-	},
-
-	chromeToPath: function _chromeToPath(aPath) 
-	{
-
-		if (!aPath || !(/^chrome:/.test(aPath)))
-			return; //not a chrome url
-		var rv;
-
-		var ios = Cc['@mozilla.org/network/io-service;1'].getService(Ci["nsIIOService"]);
-		var uri = ios.newURI(aPath, "UTF-8", null);
-		var cr = Cc['@mozilla.org/chrome/chrome-registry;1'].getService(Ci["nsIChromeRegistry"]);
-		rv = cr.convertChromeURL(uri).spec;
-
-		if (/^file:/.test(rv))
-			rv = this.urlToPath(rv);
-		else
-			rv = this.urlToPath("file://"+rv);
-
-		return rv;
-	},
-
 	splitOnCharacter: function _splitOnCharacter(aString, aStartPos, aSplitCharacter)
 	{
+//		this.LOG("splitOnCharacter: aString:"+aString+", aSplitCharacter:"+aSplitCharacter);
+
 		if (!aString) {
 			return null;
 		}
@@ -700,17 +686,15 @@ mivFunctions.prototype = {
 		var notClosed = true;
 		var notQuoteOpen = true;
 		var quotesUsed = "";
-		var strLen = aString.length;
-		var splitCharIsArray = Array.isArray(aSplitCharacter);
-		while ((tmpPos < strLen) && (notClosed)) {
-			if ((aString[tmpPos] == "'") || (aString[tmpPos] == '"')) {
+		while ((tmpPos < aString.length) && (notClosed)) {
+			if ((aString.substr(tmpPos,1) == "'") || (aString.substr(tmpPos,1) == '"')) {
 				// We found quotes. Do they belong to our string.
 				if (notQuoteOpen) {
-					quotesUsed = aString[tmpPos];
+					quotesUsed = aString.substr(tmpPos,1);
 					notQuoteOpen = false;
 				}
 				else {
-					if (aString[tmpPos] == quotesUsed) {
+					if (aString.substr(tmpPos,1) == quotesUsed) {
 						quotesUsed = "";
 						notQuoteOpen = true;
 					}
@@ -719,10 +703,12 @@ mivFunctions.prototype = {
 
 			var hitSplitCharacter = false;
 			if (notQuoteOpen) {
-				if (splitCharIsArray) {
+				if (Array.isArray(aSplitCharacter)) {
+//					this.LOG("splitOnCharacter: isArray");
 					for (var index in aSplitCharacter) {
 						if (aString.substr(tmpPos,aSplitCharacter[index].length) == aSplitCharacter[index]) {
 							hitSplitCharacter = true;
+//							this.LOG("splitOnCharacter: hitSplitCharacter: index="+result);
 							break;
 						}
 					}
@@ -738,7 +724,7 @@ mivFunctions.prototype = {
 				notClosed = false;
 			}
 			else {
-				result += aString[tmpPos];
+				result += aString.substr(tmpPos,1);
 			}
 			tmpPos++;
 		}
@@ -749,94 +735,6 @@ mivFunctions.prototype = {
 		else {
 			return null;
 		}
-	},
-
-	findCharacter: function _findCharacter(aString, aStartPos, aChar)
-	{
-		if (!aString) return -1;
-
-		var pos = aStartPos;
-		var strLength = aString.length;
-		while ((pos < strLength) && (aString[pos] != aChar)) {
-			pos++;
-		}
-
-		if (pos < strLength) {
-			return pos;
-		}
-	
-		return -1;
-	},
-
-	findString: function _findString(aString, aStartPos, aNeedle)
-	{
-		if (!aString) return -1;
-
-		if (aNeedle.length == 1) {
-			return this.findCharacter(aString, aStartPos, aNeedle[0]);
-		}
-
-		var pos = aStartPos;
-		var needleLength = aNeedle.length;
-		var strLength = aString.length - needleLength + 1;
-		while ((pos < strLength) && (aString.substr(pos, needleLength) != aNeedle)) {
-			pos++;
-		}
-
-		if (pos < strLength) {
-			return pos;
-		}
-	
-		return -1;
-	},
-
-	copyCalendarSettings: function _copyCalendarSettings(aFromId, aToId)
-	{
-		var fromCalPrefs = Cc["@mozilla.org/preferences-service;1"]
-		            .getService(Ci.nsIPrefService)
-			    .getBranch("extensions.exchangecalendar@extensions.1st-setup.nl."+aFromId+".");
-
-		if (aToId == undefined) {
-			var toId = this.getUUID();
-		}
-		else {
-			var toId = aToId;
-		}
-
-		var toCalPrefs = Cc["@mozilla.org/preferences-service;1"]
-		            .getService(Ci.nsIPrefService)
-			    .getBranch("extensions.exchangecalendar@extensions.1st-setup.nl."+toId+".");
-
-		
-		this.copyPreferences(fromCalPrefs, toCalPrefs);
-		toCalPrefs.deleteBranch("folderProperties");
-
-		fromCalPrefs = Cc["@mozilla.org/preferences-service;1"]
-		            .getService(Ci.nsIPrefService)
-			    .getBranch("calendar.registry."+aFromId+".");
-
-		toCalPrefs = Cc["@mozilla.org/preferences-service;1"]
-		            .getService(Ci.nsIPrefService)
-			    .getBranch("calendar.registry."+toId+".");
-
-		this.copyPreferences(fromCalPrefs, toCalPrefs);
-
-		return toId;
-	},
-
-	addCalendarById: function _addCalendarById(aId)
-	{
-		var ioService = Cc["@mozilla.org/network/io-service;1"]  
-				.getService(Ci.nsIIOService);  
-		var tmpURI = ioService.newURI("https://auto/"+aId, null, null);  
-
-		var calManager = Cc["@mozilla.org/calendar/manager;1"]
-			.getService(Ci.calICalendarManager);
-		var newCal = calManager.createCalendar("exchangecalendar", tmpURI);
-
-		newCal.id = aId;
-
-		calManager.registerCalendar(newCal);
 	},
 
 }

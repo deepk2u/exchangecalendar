@@ -28,11 +28,4 @@ interface mivExchangeStatistics : nsISupports
   void setServerVersion(in AUTF8String aURL, in AUTF8String aVersion);
   AUTF8String getServerVersion([optional] in AUTF8String aURL);
 
-  void getURLList(out uint32_t count, [array,size_is(count),retval] out string aURLStr);
-  void addDataRead(in AUTF8String aURL, in unsigned long long aSize);
-  void addDataSend(in AUTF8String aURL, in unsigned long long aSize);
-
-  void addXML2JXONObject();
-  readonly attribute unsigned long long xml2jxonCount;
-
 };

@@ -38,8 +38,6 @@
  * ***** BEGIN LICENSE BLOCK *****/
 -->
 
-<?xml-stylesheet href="chrome://exchangecalendar/skin/calendar-calendars-list.css" type="text/css"?>
-
 <!DOCTYPE overlay SYSTEM "chrome://exchangecalendar/locale/calendar-calendars-list.dtd">
 
 <overlay id="calendar-list-overlay"
@@ -48,15 +46,14 @@
     <script type="application/javascript" src="chrome://exchangecalendar/content/calendar-calendars-list.js"/>
 
   <commandset id="calendar_commands">
-    <command id="exchWebService_convert_calendar_command" oncommand="tmpCalPopUpMenu.convertSettings()"/>
-    <command id="exchWebService_edit_calendar_command" oncommand="tmpCalPopUpMenu.editExchangeSettings()"/>
-    <command id="exchWebService_oof_settings_command" oncommand="tmpCalPopUpMenu.editOofSettings()"/>
-    <command id="exchWebService_clone_settings_command" oncommand="tmpCalPopUpMenu.cloneSettings()"/>
+    <command id="exchWebService_convert_calendar_command" oncommand="exchWebService.calPopUpMenu.convertSettings()"/>
+    <command id="exchWebService_edit_calendar_command" oncommand="exchWebService.calPopUpMenu.editExchangeSettings()"/>
+    <command id="exchWebService_oof_settings_command" oncommand="exchWebService.calPopUpMenu.editOofSettings()"/>
+    <command id="exchWebService_clone_settings_command" oncommand="exchWebService.calPopUpMenu.cloneSettings()"/>
   </commandset>
 
-  <popupset id="calendar-popupset">
     <menupopup id="list-calendars-context-menu"
-		onpopupshown="tmpCalPopUpMenu.checkForExchangeCalendar()">
+		onpopupshown="exchWebService.calPopUpMenu.checkForExchangeCalendar()">
       <menuitem id="exchWebService-list-calendars-context-convertFromOldAddOn"
                 label="&calendar.context.exchange.convert.label;"
                 observes="exchWebService_convert_calendar_command"/>
@@ -70,11 +67,5 @@
                 label="&calendar.context.exchange.clone.settings.label;"
                 observes="exchWebService_clone_settings_command"/>
     </menupopup>
-    <tooltip id="calendar-list-tooltip"
-             onpopupshowing="return tmpCalPopUpMenu.tooltipShowing(event)"/>
-  </popupset>
-
-  <calendar-list-tree id="calendar-list-tree-widget"
-                      type="exchange"/>
 
 </overlay>

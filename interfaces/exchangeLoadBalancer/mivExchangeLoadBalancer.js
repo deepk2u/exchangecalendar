@@ -27,53 +27,6 @@ var components = Components;
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
-function jobObject(aJob, aServer, aLoadBalancer)
-{
-	this.job = aJob;
-	this.server = aServer;
-	this.startTime = new Date().getTime();
-	this.exchangeRequest = null;
-	this.loadBalancer = aLoadBalancer;
-	this.state = "queued";
-	this.timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
-}
-
-jobObject.prototype = {
-	notify: function setTimeout_notify(aTimer) {
-//dump(this.server+":loadBalancer: starting Job\n");
-
-		var self = this;
-		this.state = "running";
-		this.exchangeRequest = new this.job.ecRequest(this.job.arguments, 
-		function myOk(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) { self.onRequestOk(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, this.job);}, 
-		function myError(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {self.onRequestError(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, this.job);}
-		, this.job.listener);
-	},
-
-	onRequestOk: function _onRequestOk(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, job)
-	{
-//dump(this.server+":jobObject.onRequestOk\n");
-		try{
-			arg1.argument.cbOk(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-		}
-		catch(err) { 
-			dump(this.server+":jobObject.onRequestOk Error:"+err +"\n");
-		}
-	},
-
-	onRequestError: function _onRequestError(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, job)
-	{
-//dump(this.server+":jobObject.onRequestError\n");
-		try{
-			arg1.argument.cbError(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-		}
-		catch(err) { 
-			dump(this.server+":onRequestError Error:"+err +"\n");
-		}
-	},
-
-}
-
 function mivExchangeLoadBalancer() {
 	this.serverQueue = {};
 	this.runningJobs = {};
@@ -97,14 +50,36 @@ var mivExchangeLoadBalancerGUID = "2db8c940-1927-11e2-892e-0800200c9a55";
 mivExchangeLoadBalancer.prototype = {
 
 	// methods from nsISupport
+
+	_refCount: 0,
+
+	//nsrefcnt AddRef();
+	AddRef: function _AddRef()
+	{
+		this._refCount++;
+		return this._refCount;
+	},
+
+	/* void QueryInterface(
+	  in nsIIDRef uuid,
+	  [iid_is(uuid),retval] out nsQIResult result
+	);	 */
 	QueryInterface: XPCOMUtils.generateQI([Ci.mivExchangeLoadBalancer,
 			Ci.nsISupports]),
 
+	//nsrefcnt Release();
+	Release: function _Release()
+	{
+		this._refCount--;
+		return this._refCount;
+	},
+
 	// Attributes from nsIClassInfo
+
 	classDescription: "Load balancer for requests to Exchange server.",
 	classID: components.ID("{"+mivExchangeLoadBalancerGUID+"}"),
 	contractID: "@1st-setup.nl/exchange/loadbalancer;1",
-	flags: Ci.nsIClassInfo.SINGLETON,
+	flags: Ci.nsIClassInfo.SINGLETON || Ci.nsIClassInfo.THREADSAFE,
 	implementationLanguage: Ci.nsIProgrammingLanguage.JAVASCRIPT,
 
 	// External methods
@@ -118,7 +93,7 @@ mivExchangeLoadBalancer.prototype = {
 
 	get sleepBetweenJobs()
 	{
-		return 50;  // Currently going for default zero because it works.
+		return 0;  // Currently going for default zero because it works.
 		//return this.globalFunctions.safeGetIntPref(null, PREF_MAINPART+"sleepBetweenJobs", 2, true);
 	},
 
@@ -168,7 +143,7 @@ mivExchangeLoadBalancer.prototype = {
 		if (!this.timer) {
 			this.logInfo("Start timer");
 			this.timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
-			this.timer.initWithCallback(this, 10, this.timer.TYPE_REPEATING_SLACK);
+			this.timer.initWithCallback(this, this.sleepBetweenJobs, this.timer.TYPE_REPEATING_SLACK);
 		}
 	},
 
@@ -179,29 +154,21 @@ mivExchangeLoadBalancer.prototype = {
 
 	processQueue: function _processQueue()
 	{
+		var jobCount = 0;
+
 		for (var server in this.serverQueue) {
 
-			// Cleanup jobs wich have finished
+			// Cleanup jobs with have finished
 			var oldList = this.serverQueue[server].runningJobs;
 			this.serverQueue[server].runningJobs = new Array();
 			for (var runningJob in oldList) {
-				if ((oldList[runningJob].exchangeRequest === null) || (oldList[runningJob].exchangeRequest.isRunning)) {
-					//this.logInfo("this.jobsRunning:"+this.jobsRunning);
+				if (oldList[runningJob].exchangeRequest.isRunning) {
 					this.serverQueue[server].runningJobs.push(oldList[runningJob]);
-					// Check how long this job is running
-					if (oldList[runningJob].state = "running") {
-						var timeNow = new Date().getTime();
-						var timeDiff = timeNow - oldList[runningJob].startTime;
-						if (timeDiff > 300000) {
-							dump("We have a job which is running longer than 5 minutes:"+oldList[runningJob].job.ecRequest+"\n"); 
-						}
-					}
 				}
 				else {
 					// Running job stopped.
 					this.jobsRunning--;
-					oldList[runningJob].exchangeRequest = undefined;
-					//dump(server+":running job stopped:"+this.jobsRunning+"\n");
+					this.logInfo("this.jobsRunning:"+this.jobsRunning);
 				}
 			}
 
@@ -228,6 +195,8 @@ mivExchangeLoadBalancer.prototype = {
 
 				}
 				if ((!noJobsLeft) && (this.serverQueue[server].currentCalendar < this.serverQueue[server].calendarList.length) && (this.serverQueue[server].jobs[this.serverQueue[server].calendarList[this.serverQueue[server].currentCalendar]].length > 0)) {
+					jobCount += this.serverQueue[server].jobs[this.serverQueue[server].calendarList[this.serverQueue[server].currentCalendar]].length;
+
 					var job = this.serverQueue[server].jobs[this.serverQueue[server].calendarList[this.serverQueue[server].currentCalendar]].shift();
 
 					this.serverQueue[server].currentCalendar++;
@@ -242,16 +211,19 @@ mivExchangeLoadBalancer.prototype = {
 					job.arguments["job"] = job;
 					job.arguments["calendar"] = job.calendar;
 				
-					var newJob = new jobObject(job, server, this);
+					var self = this;
 
+					var newJob = { job: job,
+							exchangeRequest: new job.ecRequest(job.arguments, 
+							function myOk(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) { self.onRequestOk(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);}, 
+							function myError(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {self.onRequestError(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);}
+							, job.listener)
+									};
 					this.serverQueue[server].runningJobs.push(newJob);
 
 					this.logInfo("Starting job to queue for server '"+server+"' for calendar '"+job.calendar.id+"'. We now have:"+this.serverQueue[server].jobs[job.calendar.id].length+" jobs in queue and "+this.serverQueue[server].runningJobs.length+" jobs running.",2);
 					this.jobsRunning++;
 					this.logInfo("this.jobsRunning:"+this.jobsRunning,1);
-
-//dump(server+":loadBalancer: starting timeout for Job\n");
-					newJob.timer.initWithCallback(newJob, this.sleepBetweenJobs, Ci.nsITimer.TYPE_ONE_SHOT);
 				}				
 			}
 		}
@@ -260,35 +232,34 @@ mivExchangeLoadBalancer.prototype = {
 			this.logInfo("No more jobs left. Stop Timer.",2);
 			this.timer.cancel();
 			delete this.timer;
+			this.timer = null;
 		}
 
 	},
 
-/*	onRequestOk: function _onRequestOk(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, job)
+	onRequestOk: function _onRequestOk(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
 	{
 
 		try{
 			this.logInfo("onRequestOk job to queue for server '"+arg1.argument.serverUrl+"' for calendar '"+arg1.argument.job.calendar.id+"'. We now have:"+this.serverQueue[arg1.argument.serverUrl].jobs[arg1.argument.calendar.id].length+" jobs in queue and "+this.serverQueue[arg1.argument.serverUrl].runningJobs.length+" jobs running.");
 			arg1.argument.cbOk(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-//			arg1.isRunning = false;
 		}
 		catch(err) { 
 			this.globalFunctions.LOG("onRequestOk Error:"+err + " ("+this.globalFunctions.STACK()+")", -1);
 		}
 	},
 
-	onRequestError: function _onRequestError(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, job)
+	onRequestError: function _onRequestError(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
 	{
 		try{
 			this.logInfo("onRequestError job to queue for server '"+arg1.argument.serverUrl+"' for calendar '"+arg1.argument.job.calendar.id+"'. We now have:"+this.serverQueue[arg1.argument.serverUrl].jobs[arg1.argument.calendar.id].length+" jobs in queue and "+this.serverQueue[arg1.argument.serverUrl].runningJobs.length+" jobs running.");
 			arg1.argument.cbError(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-//			arg1.isRunning = false;
 		}
 		catch(err) { 
 			this.globalFunctions.LOG("onRequestError Error:"+err + " ("+this.globalFunctions.STACK()+")", -1);
 		}
 	},
-*/
+
 	clearQueueForCalendar: function _clearQueueForCalendar(aServer, aCalendar)
 	{
 		if (this.serverQueue[aServer]) {

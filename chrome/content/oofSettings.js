@@ -43,49 +43,34 @@ Cu.import("resource://calendar/modules/calUtils.jsm");
 Cu.import("resource://exchangecalendar/erGetUserOofSettings.js");
 Cu.import("resource://exchangecalendar/erSetUserOofSettings.js");
 
-//Cu.import("resource://exchangecalendar/ecFunctions.js");
+Cu.import("resource://exchangecalendar/ecFunctions.js");
 
-//if (! exchWebService) var exchWebService = {};
+if (! exchWebService) var exchWebService = {};
 
-/*if (! this.cal) {
+if (! exchWebService.cal) {
 	Cu.import("resource://calendar/modules/calUtils.jsm", exchWebService);
 }
-*/
 
-function exchOOFSettings(aDocument, aWindow)
-{
-	this._document = aDocument;
-	this._window = aWindow;
-
-	this.globalFunctions = Cc["@1st-setup.nl/global/functions;1"]
-				.getService(Ci.mivFunctions);
-}
-
-exchOOFSettings.prototype = {
-
-//exchWebService.oofSettings = {
+exchWebService.oofSettings = {
 
 	calPrefs: null,
 	intOofSettings: {},
 
 	onLoad: function _onLoad()
 	{
-		Cu.import("resource://calendar/modules/calUtils.jsm", this);
-		var calId = this._window.arguments[0].calendar.id;
+		var calId = window.arguments[0].calendar.id;
 
 		this.calPrefs = Cc["@mozilla.org/preferences-service;1"]
 		            .getService(Ci.nsIPrefService)
 			    .getBranch("extensions.exchangecalendar@extensions.1st-setup.nl."+calId+".");
-		this._document.getElementById("exchWebService-oofSettings-title").value = this.globalFunctions.safeGetCharPref(this.calPrefs, "ecMailbox", "null");
-		this.getOofSettings();
 
-		this.internalEditorElement = this._document.getElementById("exchWebService-oof-editor-internal");
-		this.externalEditorElement = this._document.getElementById("exchWebService-oof-editor-external");
+		document.getElementById("exchWebService-oofSettings-title").value = exchWebService.commonFunctions.safeGetCharPref(this.calPrefs, "ecMailbox", "null");
+		exchWebService.oofSettings.getOofSettings();
 	},
 
 	onSave: function _onSave()
 	{
-		this.setOofSettings();
+		exchWebService.oofSettings.setOofSettings();
 
 		Cc["@mozilla.org/preferences-service;1"]
 		                    .getService(Ci.nsIPrefService).savePrefFile(null);
@@ -94,157 +79,145 @@ exchOOFSettings.prototype = {
 
 	getOofSettings: function _getOofSettings()
 	{
-		this._document.getElementById("exchWebService-load-error-message").value = this.globalFunctions.getString("calExchangeCalendar", "ecLoadingOofSettings", [], "exchangecalendar");
+		document.getElementById("exchWebService-load-error-message").value = exchWebService.commonFunctions.getString("calExchangeCalendar", "ecLoadingOofSettings", [], "exchangecalendar");
 
-		var self = this;
 		var tmpObject = new erGetUserOofSettingsRequest(
-			{user: this.globalFunctions.safeGetCharPref(this.calPrefs, "ecDomain", "null")+"\\"+this.globalFunctions.safeGetCharPref(this.calPrefs, "ecUser", "null"), 
-			 mailbox: this.globalFunctions.safeGetCharPref(this.calPrefs, "ecMailbox", "null"),
-			 serverUrl: this.globalFunctions.safeGetCharPref(this.calPrefs, "ecServer", "null")}, 
-			function(aGetUserOofSettingsRequest, aOofSettings) { self.getOofSettingsOK(aGetUserOofSettingsRequest, aOofSettings);}, 
-			function(aGetUserOofSettingsRequest, aCode, aMsg) { self.getOofSettingsError(aGetUserOofSettingsRequest, aCode, aMsg);} );
+			{user: exchWebService.commonFunctions.safeGetCharPref(this.calPrefs, "ecDomain", "null")+"\\"+exchWebService.commonFunctions.safeGetCharPref(this.calPrefs, "ecUser", "null"), 
+			 mailbox: exchWebService.commonFunctions.safeGetCharPref(this.calPrefs, "ecMailbox", "null"),
+			 serverUrl: exchWebService.commonFunctions.safeGetCharPref(this.calPrefs, "ecServer", "null")}, this.getOofSettingsOK, this.getOofSettingsError)
 	},
 
 	getOofSettingsOK: function _getOofSettingsOK(aGetUserOofSettingsRequest, aOofSettings)
 	{
-		this.intOofSettings = aOofSettings;
+		exchWebService.oofSettings.intOofSettings = aOofSettings;
 
-		this.globalFunctions.LOG("intern:"+this.intOofSettings.internalReply);
-		this.globalFunctions.LOG("extern:"+this.intOofSettings.externalReply);
+		exchWebService.commonFunctions.LOG("intern:"+exchWebService.oofSettings.intOofSettings.internalReply);
+		exchWebService.commonFunctions.LOG("extern:"+exchWebService.oofSettings.intOofSettings.externalReply);
 
-		this._document.getElementById("exchWebService-load-error-message").value = this.globalFunctions.getString("calExchangeCalendar", "ecLoadedOofSettings", [], "exchangecalendar");	
+		document.getElementById("exchWebService-load-error-message").value = exchWebService.commonFunctions.getString("calExchangeCalendar", "ecLoadedOofSettings", [], "exchangecalendar");	
 	
-		this._document.getElementById("exchWebService_oofSettings_dialog").buttons = "accept,cancel";
+		document.getElementById("exchWebService_oofSettings_dialog").buttons = "accept,cancel";
 
-		this._document.getElementById("vbox-exchWebService-oof-settings").disabled = false;
+		document.getElementById("vbox-exchWebService-oof-settings").disabled = false;
 
-		this._document.getElementById("exchWebService-oof-status").value = (aOofSettings.oofState == "Disabled") ? "Disabled" : "Enabled";
+		document.getElementById("exchWebService-oof-status").value = (aOofSettings.oofState == "Disabled") ? "Disabled" : "Enabled";
 
-		this._document.getElementById("exchWebService-oof-scheduled").checked = (aOofSettings.oofState == "Scheduled");
+		document.getElementById("exchWebService-oof-scheduled").checked = (aOofSettings.oofState == "Scheduled");
 
 		if (aOofSettings.startTime) {
-			this._document.getElementById("exchWebService-oof-startdate").year = aOofSettings.startTime.year;
-			this._document.getElementById("exchWebService-oof-startdate").month = aOofSettings.startTime.month;
-			this._document.getElementById("exchWebService-oof-startdate").date = aOofSettings.startTime.day;
+			document.getElementById("exchWebService-oof-startdate").year = aOofSettings.startTime.year;
+			document.getElementById("exchWebService-oof-startdate").month = aOofSettings.startTime.month;
+			document.getElementById("exchWebService-oof-startdate").date = aOofSettings.startTime.day;
 
-			this._document.getElementById("exchWebService-oof-starttime").hour = aOofSettings.startTime.hour;
-			this._document.getElementById("exchWebService-oof-starttime").minute = aOofSettings.startTime.minute;
+			document.getElementById("exchWebService-oof-starttime").hour = aOofSettings.startTime.hour;
+			document.getElementById("exchWebService-oof-starttime").minute = aOofSettings.startTime.minute;
 		}
 
 		if (aOofSettings.endTime) {
-			this._document.getElementById("exchWebService-oof-enddate").year = aOofSettings.endTime.year;
-			this._document.getElementById("exchWebService-oof-enddate").month = aOofSettings.endTime.month;
-			this._document.getElementById("exchWebService-oof-enddate").date = aOofSettings.endTime.day;
+			document.getElementById("exchWebService-oof-enddate").year = aOofSettings.endTime.year;
+			document.getElementById("exchWebService-oof-enddate").month = aOofSettings.endTime.month;
+			document.getElementById("exchWebService-oof-enddate").date = aOofSettings.endTime.day;
 
-			this._document.getElementById("exchWebService-oof-endtime").hour = aOofSettings.endTime.hour;
-			this._document.getElementById("exchWebService-oof-endtime").minute = aOofSettings.endTime.minute;
+			document.getElementById("exchWebService-oof-endtime").hour = aOofSettings.endTime.hour;
+			document.getElementById("exchWebService-oof-endtime").minute = aOofSettings.endTime.minute;
 		}
-		this.doScheduledChanged();
+		exchWebService.oofSettings.doScheduledChanged();
 
-		this._document.getElementById("exchWebService-oof-externalaudience").value = aOofSettings.externalAudience;
+		document.getElementById("exchWebService-oof-externalaudience").value = aOofSettings.externalAudience;
 
-		if (this.internalEditorElement) {
-			this.internalEditorElement.content = this.intOofSettings.internalReply;
-		}
+		
+		document.getElementById("exchWebService-oof-textbox-internal").value = exchWebService.oofSettings.intOofSettings.internalReply.replace(/\<br\>/g , "\n").replace(/\&nbsp\;/g," ");
 
-		if (this.externalEditorElement) {
-			this.externalEditorElement.content = this.intOofSettings.externalReply;
-		}
+		document.getElementById("exchWebService-oof-textbox-external").value = exchWebService.oofSettings.intOofSettings.externalReply.replace(/\<br\>/g , "\n").replace(/\&nbsp\;/g," ");
+		
 
 	},
 
 	getOofSettingsError: function _getOofSettingsError(aGetUserOofSettingsRequest, aCode, aMsg)
 	{
-		this._document.getElementById("exchWebService-load-error-message").value = this.globalFunctions.getString("calExchangeCalendar", "ecErrorLoadingOofSettings", [aMsg, aCode], "exchangecalendar");
+		document.getElementById("exchWebService-load-error-message").value = exchWebService.commonFunctions.getString("calExchangeCalendar", "ecErrorLoadingOofSettings", [aMsg, aCode], "exchangecalendar");
 	},
 
 	doScheduledChanged: function _doScheduledChanged()
 	{
 		// Enable or disable time/date pickers
-		this._document.getElementById("exchWebService-oof-startdate").disabled = (!this._document.getElementById("exchWebService-oof-scheduled").checked);
-		this._document.getElementById("exchWebService-oof-starttime").disabled = (!this._document.getElementById("exchWebService-oof-scheduled").checked);
-		this._document.getElementById("exchWebService-oof-enddate").disabled = (!this._document.getElementById("exchWebService-oof-scheduled").checked);
-		this._document.getElementById("exchWebService-oof-endtime").disabled = (!this._document.getElementById("exchWebService-oof-scheduled").checked);
+		document.getElementById("exchWebService-oof-startdate").disabled = (!document.getElementById("exchWebService-oof-scheduled").checked);
+		document.getElementById("exchWebService-oof-starttime").disabled = (!document.getElementById("exchWebService-oof-scheduled").checked);
+		document.getElementById("exchWebService-oof-enddate").disabled = (!document.getElementById("exchWebService-oof-scheduled").checked);
+		document.getElementById("exchWebService-oof-endtime").disabled = (!document.getElementById("exchWebService-oof-scheduled").checked);
 	},	
 
 	setOofSettings: function _setOofSettings()
 	{
-		this._document.getElementById("exchWebService-load-error-message").value = this.globalFunctions.getString("calExchangeCalendar", "ecSavingOofSettings", [], "exchangecalendar");
+		document.getElementById("exchWebService-load-error-message").value = exchWebService.commonFunctions.getString("calExchangeCalendar", "ecSavingOofSettings", [], "exchangecalendar");
 
 		var oofState = "Disabled";
-		if (this._document.getElementById("exchWebService-oof-status").value == "Enabled") {
+		if (document.getElementById("exchWebService-oof-status").value == "Enabled") {
 			oofState = "Enabled";
-			if (this._document.getElementById("exchWebService-oof-scheduled").checked) {
+			if (document.getElementById("exchWebService-oof-scheduled").checked) {
 				oofState = "Scheduled";
 			}
 		}
 	 
-		var startTime = this.cal.createDateTime();
-		startTime.resetTo(this._document.getElementById("exchWebService-oof-startdate").year,
-				this._document.getElementById("exchWebService-oof-startdate").month,
-				this._document.getElementById("exchWebService-oof-startdate").date,
-				this._document.getElementById("exchWebService-oof-starttime").hour,
-				this._document.getElementById("exchWebService-oof-starttime").minute,
+		var startTime = exchWebService.cal.createDateTime();
+		startTime.resetTo(document.getElementById("exchWebService-oof-startdate").year,
+				document.getElementById("exchWebService-oof-startdate").month,
+				document.getElementById("exchWebService-oof-startdate").date,
+				document.getElementById("exchWebService-oof-starttime").hour,
+				document.getElementById("exchWebService-oof-starttime").minute,
 				0,
-				this.globalFunctions.ecDefaultTimeZone());
-		startTime = startTime.getInTimezone(this.globalFunctions.ecUTC());
+				exchWebService.commonFunctions.ecDefaultTimeZone());
+		startTime = startTime.getInTimezone(exchWebService.commonFunctions.ecUTC());
 
-		var endTime = this.cal.createDateTime();
-		endTime.resetTo(this._document.getElementById("exchWebService-oof-enddate").year,
-				this._document.getElementById("exchWebService-oof-enddate").month,
-				this._document.getElementById("exchWebService-oof-enddate").date,
-				this._document.getElementById("exchWebService-oof-endtime").hour,
-				this._document.getElementById("exchWebService-oof-endtime").minute,
+		var endTime = exchWebService.cal.createDateTime();
+		endTime.resetTo(document.getElementById("exchWebService-oof-enddate").year,
+				document.getElementById("exchWebService-oof-enddate").month,
+				document.getElementById("exchWebService-oof-enddate").date,
+				document.getElementById("exchWebService-oof-endtime").hour,
+				document.getElementById("exchWebService-oof-endtime").minute,
 				0,
-				this.globalFunctions.ecDefaultTimeZone());
-		endTime = endTime.getInTimezone(this.globalFunctions.ecUTC());
+				exchWebService.commonFunctions.ecDefaultTimeZone());
+		endTime = endTime.getInTimezone(exchWebService.commonFunctions.ecUTC());
 
 		var internalReply = this.intOofSettings.internalReply;
 		var externalReply = this.intOofSettings.externalReply;
 		
-		internalReply = "<html>"+this.internalEditorElement.content+"</html>";
+		internalReply = document.getElementById("exchWebService-oof-textbox-internal").value.replace(/\n/g, '<br>').replace(/\s/g, '&nbsp;');		
 		
-		externalReply = "<html>"+this.externalEditorElement.content+"</html>";
+		externalReply = document.getElementById("exchWebService-oof-textbox-external").value.replace(/\n/g, '<br>').replace(/\s/g, '&nbsp;');
 
 
-		var self = this;
 		var tmpObject = new erSetUserOofSettingsRequest(
-			{user: this.globalFunctions.safeGetCharPref(this.calPrefs, "ecDomain", "null")+"\\"+this.globalFunctions.safeGetCharPref(this.calPrefs, "ecUser", "null"), 
-			 mailbox: this.globalFunctions.safeGetCharPref(this.calPrefs, "ecMailbox", "null"),
-			 serverUrl: this.globalFunctions.safeGetCharPref(this.calPrefs, "ecServer", "null"),
+			{user: exchWebService.commonFunctions.safeGetCharPref(this.calPrefs, "ecDomain", "null")+"\\"+exchWebService.commonFunctions.safeGetCharPref(this.calPrefs, "ecUser", "null"), 
+			 mailbox: exchWebService.commonFunctions.safeGetCharPref(this.calPrefs, "ecMailbox", "null"),
+			 serverUrl: exchWebService.commonFunctions.safeGetCharPref(this.calPrefs, "ecServer", "null"),
 		
 			 oofState : oofState,
-			 externalAudience : this._document.getElementById("exchWebService-oof-externalaudience").value,
+			 externalAudience : document.getElementById("exchWebService-oof-externalaudience").value,
 			 startTime : startTime,
 			 endTime : endTime,
 			 internalReply : internalReply,
 			 externalReply : externalReply
 
-			}, 
-			function(aGetUserOofSettingsRequest){ self.setOofSettingsOK(aGetUserOofSettingsRequest);}, 
-			function(aGetUserOofSettingsRequest, aCode, aMsg) { self.setOofSettingsError(aGetUserOofSettingsRequest, aCode, aMsg);});
+			}, this.setOofSettingsOK, this.setOofSettingsError);
 	},
 
 	setOofSettingsOK: function _setOofSettingsOK(aGetUserOofSettingsRequest)
 	{
-		this._document.getElementById("exchWebService-load-error-message").value = this.globalFunctions.getString("calExchangeCalendar", "ecSavedOofSettings", [], "exchangecalendar");
+		document.getElementById("exchWebService-load-error-message").value = exchWebService.commonFunctions.getString("calExchangeCalendar", "ecSavedOofSettings", [], "exchangecalendar");
 		alert("Settings saved.");
 
-		this.getOofSettings();
+		exchWebService.oofSettings.getOofSettings();
 
 	},
 
 	setOofSettingsError: function _setOofSettingsError(aGetUserOofSettingsRequest, aCode, aMsg)
 	{
-		this._document.getElementById("exchWebService-load-error-message").value = this.globalFunctions.getString("calExchangeCalendar", "ecErrorSavingOofSettings", [aMsg, aCode], "exchangecalendar");
+		document.getElementById("exchWebService-load-error-message").value = exchWebService.commonFunctions.getString("calExchangeCalendar", "ecErrorSavingOofSettings", [aMsg, aCode], "exchangecalendar");
 		alert("Error saving settings. Msg:"+aMsg+", Code:"+aCode);
 
-		this.getOofSettings();
+		exchWebService.oofSettings.getOofSettings();
 
 	},
 
 }
-
-var tmpOOFSettings = new exchOOFSettings(document, window);
-window.addEventListener("load", function () { window.removeEventListener("load",arguments.callee,false); tmpOOFSettings.onLoad(); }, true);
-

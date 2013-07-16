@@ -100,21 +100,19 @@ erSyncFolderItemsRequest.prototype = {
 
 		var itemShape = req.addChildTag("ItemShape", "nsMessages", null);
 		itemShape.addChildTag("BaseShape", "nsTypes", "IdOnly");
-		itemShape = null;
 
 		var parentFolder = makeParentFolderIds2("SyncFolderId", this.argument);
 		req.addChildTagObject(parentFolder);
-		parentFolder = null;
 	
 		if ((aSyncState) && (aSyncState != "")) {
 			req.addChildTag("SyncState", "nsMessages", aSyncState);
 		}
 
 		if (this.getSyncState) {
-			req.addChildTag("MaxChangesReturned", "nsMessages", "25");
+			req.addChildTag("MaxChangesReturned", "nsMessages", "512");
 		}
 		else {
-			req.addChildTag("MaxChangesReturned", "nsMessages", "25");
+			req.addChildTag("MaxChangesReturned", "nsMessages", "15");
 		}
 		
 		this.parent.xml2jxon = true;
@@ -124,7 +122,6 @@ erSyncFolderItemsRequest.prototype = {
 		//exchWebService.commonFunctions.LOG(String(this.parent.makeSoapMessage(req)));
 		this.attempts++;
                 this.parent.sendRequest(this.parent.makeSoapMessage(req), this.serverUrl);
-		req = null;
 	},
 
 	onSendOk: function _onSendOk(aExchangeRequest, aResp)
@@ -146,13 +143,11 @@ erSyncFolderItemsRequest.prototype = {
 						this.creations.push({Id: calendarItem.getAttribute("Id").toString(),
 							  ChangeKey: calendarItem.getAttribute("ChangeKey").toString()});
 					}
-					calendarItems = null;
 					var tasks = creation.XPath("/t:Task/t:ItemId");
 					for each (var task in tasks) {
 						this.creations.push({Id: task.getAttribute("Id").toString(),
 							  ChangeKey: task.getAttribute("ChangeKey").toString()});
 					}
-					tasks = null;
 				}
 				createItems = null;
 
@@ -163,13 +158,11 @@ erSyncFolderItemsRequest.prototype = {
 						this.updates.push({Id: calendarItem.getAttribute("Id").toString(),
 					  ChangeKey: calendarItem.getAttribute("ChangeKey").toString()});
 					}
-					calendarItems = null;
 					var tasks = update.XPath("/t:Task/t:ItemId");
 					for each (var task in tasks) {
 						this.updates.push({Id: task.getAttribute("Id").toString(),
 					  ChangeKey: task.getAttribute("ChangeKey").toString()});
 					}
-					tasks = null;
 				}
 				updateItems = null;
 
@@ -184,12 +177,6 @@ erSyncFolderItemsRequest.prototype = {
 			rm = null;
 
 			if (lastItemInRange == "false") {
-				if (this.mCbOk) {
-					this.mCbOk(this, this.creations, this.updates, this.deletions, syncState);
-				}
-				this.creations = [];
-				this.updates = [];
-				this.deletions = [];
 				this.execute(syncState);
 				return;
 			}
@@ -205,7 +192,6 @@ erSyncFolderItemsRequest.prototype = {
 				// We retry without a known syncstate.
 				this.getSyncState = true;
 				this.execute(null);
-				return;
 			}
 			else {
 				var rm = aResp.XPath("/s:Envelope/s:Body/m:SyncFolderItemsResponse/m:ResponseMessages/m:SyncFolderItemsResponseMessage");
@@ -215,19 +201,17 @@ erSyncFolderItemsRequest.prototype = {
 				else {
 					var ResponseCode = "Unknown error from Exchange server.";
 				}
-				rm = null;
 				this.onSendError(aExchangeRequest, this.parent.ER_ERROR_SYNCFOLDERITEMS_UNKNOWN, "Error during SyncFolderItems:"+ResponseCode);
 				return;
 			}
 		}
-		this.parent = null;
+
 	},
 
 	onSendError: function _onSendError(aExchangeRequest, aCode, aMsg)
 	{
 //exchWebService.commonFunctions.LOG("onSendError aMsg:"+aMsg+"\n");
 		this.isRunning = false;
-		this.parent = null;
 		if (this.mCbError) {
 			this.mCbError(this, aCode, aMsg);
 		}

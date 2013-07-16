@@ -204,3 +204,5 @@ exchWebService.forewardEvent2 = {
 
 window.addEventListener("load", exchWebService.forewardEvent2.onLoad, false);
 
+exchWebService.commonFunctions.LOG(" YEEHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA 2");
+

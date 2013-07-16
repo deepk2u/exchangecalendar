@@ -1,7 +1,0 @@
-<!ENTITY exchWebService.owner.label "Responsable:">
-<!ENTITY exchWebService.totalWork.label "Temps total:">
-<!ENTITY exchWebService.actualWork.label "Temps réalisé:">
-<!ENTITY exchWebService.mileage.label "Durée:">
-<!ENTITY exchWebService.billingInformation.label "Information de facturation:">
-<!ENTITY exchWebService.companies.label "Compagnie:">
-

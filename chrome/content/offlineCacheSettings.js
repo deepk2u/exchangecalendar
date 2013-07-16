@@ -38,6 +38,8 @@ var Cc = Components.classes;
 var Ci = Components.interfaces;
 var Cu = Components.utils;
 
+Cu.import("resource://exchangecalendar/ecFunctions.js");
+
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm"); 
 Cu.import("resource://gre/modules/FileUtils.jsm");
@@ -46,53 +48,47 @@ Cu.import("resource://calendar/modules/calUtils.jsm");
 Cu.import("resource://calendar/modules/calProviderUtils.jsm");
 Cu.import("resource://calendar/modules/calStorageHelpers.jsm");
 
-function exchOfflineCacheSettings(aDocument, aWindow)
-{
-	this._document = aDocument;
-	this._window = aWindow;
+if (! exchWebService) var exchWebService = {};
 
-	this.globalFunctions = Cc["@1st-setup.nl/global/functions;1"]
-				.getService(Ci.mivFunctions);
-}
-
-exchOfflineCacheSettings.prototype = {
-
+exchWebService.offlineCacheSettings = {	
 	onLoad: function _onLoad(event) 
 	{
-		var calId = this._window.arguments[0].calendar.id;
-		var aCalendar = this._window.arguments[0].calendar;
+		var calId = window.arguments[0].calendar.id;
+		var aCalendar = window.arguments[0].calendar;
 		
 
 		// Load cache preferences
 
-		this.oldUseOfflineCache = aCalendar.useOfflineCache;
-		if(aCalendar.useOfflineCache){
-			this._document.getElementById("exchWebService-offlineCacheproperties-cacheState").checked=true;
-			this._document.getElementById("exchWebService-offlineCacheproperties-detaisvbox").removeAttribute("collapsed");
+		this.oldUseOfflineCache = aCalendar.getProperty("exchWebService.useOfflineCache"); 
+		if(aCalendar.getProperty("exchWebService.useOfflineCache")){			
+			document.getElementById("exchWebService-offlineCacheproperties-cacheState").checked=true;
+			document.getElementById("exchWebService-offlineCacheproperties-detaisvbox").removeAttribute("collapsed");
+			
+			var cachePrefs = exchWebService.offlineCacheSettings.countItemsInOfflineCache(aCalendar);			
 			
 			var startDate = "no date";
 			var endDate = "no date";
 
-			if (aCalendar.offlineStartDate) {
-				startDate = aCalendar.offlineStartDate.toString().substring(0,10);
+			if (cachePrefs.aStartDateForCaching != null && (cachePrefs.aStartDateForCaching).length>11){
+				startDate = (cachePrefs.aStartDateForCaching).substring(0,10);				
 			}
-			if (aCalendar.offlineEndDate) {
-				endDate = aCalendar.offlineEndDate.toString().substring(0,10);
-			}
+			if (cachePrefs.aEndDateForCaching != null && (cachePrefs.aEndDateForCaching).length>11){
+				endDate = (cachePrefs.aEndDateForCaching).substring(0,10);
+			}				
 	
-			this._document.getElementById("exchWebService-offlineCacheproperties-cachingStartDateValue").value = startDate;
-			this._document.getElementById("exchWebService-offlineCacheproperties-cachingEndDateValue").value = endDate;
+			document.getElementById("exchWebService-offlineCacheproperties-cachingStartDateValue").value = startDate;
+			document.getElementById("exchWebService-offlineCacheproperties-cachingEndDateValue").value = endDate;
 			
-			this._document.getElementById("exchWebService-offlineCacheproperties-totalEventsValue").value=aCalendar.offlineEventItemCount;
-			this._document.getElementById("exchWebService-offlineCacheproperties-totalTasksValue").value=aCalendar.offlineToDoItemCount;
+			document.getElementById("exchWebService-offlineCacheproperties-totalEventsValue").value=cachePrefs.totalNoOfEvents;
+			document.getElementById("exchWebService-offlineCacheproperties-totalTasksValue").value=cachePrefs.totalNoOfToDos;
 
-			this._document.getElementById("exchWebService-offlineCacheproperties-maintainancegroupbox").removeAttribute("collapsed");
-			this._document.getElementById("exchWebService-offlineCacheproperties-preferencesgroupbox").removeAttribute("collapsed");
+			document.getElementById("exchWebService-offlineCacheproperties-maintainancegroupbox").removeAttribute("collapsed");
+			document.getElementById("exchWebService-offlineCacheproperties-preferencesgroupbox").removeAttribute("collapsed");
 
 			var exchWebServicesCalPrefs = Cc["@mozilla.org/preferences-service;1"].getService(Ci.nsIPrefService).getBranch("extensions.exchangecalendar@extensions.1st-setup.nl."+calId+".");
 			
-			this._document.getElementById("exchWebService-offlineCacheproperties-monthsBeforeToday").value=this.globalFunctions.safeGetIntPref(exchWebServicesCalPrefs, "ecOfflineCacheMonthsBeforeToday",1);
-			this._document.getElementById("exchWebService-offlineCacheproperties-monthsAfterToday").value=this.globalFunctions.safeGetIntPref(exchWebServicesCalPrefs, "ecOfflineCacheMonthsAfterToday",1);
+			document.getElementById("exchWebService-offlineCacheproperties-monthsBeforeToday").value=exchWebService.commonFunctions.safeGetIntPref(exchWebServicesCalPrefs, "ecOfflineCacheMonthsBeforeToday",1);
+			document.getElementById("exchWebService-offlineCacheproperties-monthsAfterToday").value=exchWebService.commonFunctions.safeGetIntPref(exchWebServicesCalPrefs, "ecOfflineCacheMonthsAfterToday",1);
 			
 		}
 
@@ -100,34 +96,35 @@ exchOfflineCacheSettings.prototype = {
 	
 	doClearCache: function _doClearCache()
 	{	
-		var aCalendar = this._window.arguments[0].calendar;
-		this.clearCachedData(aCalendar);				
+		var aCalendar = window.arguments[0].calendar;
+		exchWebService.offlineCacheSettings.clearCachedData(aCalendar);				
 	},
 
 	onSave: function _onSave()
 	{	
-		var calId = this._window.arguments[0].calendar.id;
-		var aCalendar = this._window.arguments[0].calendar;
-		tmpSettingsOverlay.exchWebServicesSaveExchangeSettingsByCalId(calId);
+		var calId = window.arguments[0].calendar.id;
+		var aCalendar = window.arguments[0].calendar;
+		exchWebServicesSaveExchangeSettingsByCalId(calId);
 
 		var exchWebServicesCalPrefs = Cc["@mozilla.org/preferences-service;1"]
 						.getService(Ci.nsIPrefService)
 						.getBranch("extensions.exchangecalendar@extensions.1st-setup.nl."+calId+".");
 
 		// Save caching preferences
-		/*if(this._document.getElementById("exchWebService-offlineCacheproperties-cacheState").checked){
+		/*if(document.getElementById("exchWebService-offlineCacheproperties-cacheState").checked){
 			exchWebServicesCalPrefs.setBoolPref("useOfflineCache", true);	
 		}
 		else{
 			exchWebServicesCalPrefs.setBoolPref("useOfflineCache", false);					
 		}*/
 		
-		exchWebServicesCalPrefs.setIntPref("ecOfflineCacheMonthsBeforeToday", this._document.getElementById("exchWebService-offlineCacheproperties-monthsBeforeToday").value); 
-		exchWebServicesCalPrefs.setIntPref("ecOfflineCacheMonthsAfterToday", this._document.getElementById("exchWebService-offlineCacheproperties-monthsAfterToday").value); 
+		exchWebServicesCalPrefs.setIntPref("ecOfflineCacheMonthsBeforeToday", document.getElementById("exchWebService-offlineCacheproperties-monthsBeforeToday").value); 
+		exchWebServicesCalPrefs.setIntPref("ecOfflineCacheMonthsAfterToday", document.getElementById("exchWebService-offlineCacheproperties-monthsAfterToday").value); 
 
-		if (this.oldUseOfflineCache != this._document.getElementById("exchWebService-offlineCacheproperties-cacheState").checked) {
-			aCalendar.setProperty("exchWebService.useOfflineCache", this._document.getElementById("exchWebService-offlineCacheproperties-cacheState").checked)
+		if (this.oldUseOfflineCache != document.getElementById("exchWebService-offlineCacheproperties-cacheState").checked) {
+			aCalendar.setProperty("exchWebService.useOfflineCache", document.getElementById("exchWebService-offlineCacheproperties-cacheState").checked)
 		}
+
 	},
 	
 	getDBConn : function _aDBConn(aCalendar)
@@ -141,11 +138,66 @@ exchOfflineCacheSettings.prototype = {
 		return mDBConn;
 	},
 
+	countItemsInOfflineCache : function _countItemsInOfflineCache(aCalendar)
+	{	
+		let aDBConn = exchWebService.offlineCacheSettings.getDBConn(aCalendar);
+		var eventCount = 0;
+		var toDoCount = 0;
+		var startDate = 0;
+		var endDate=0;
+		
+		var cachePrefs={
+					aStartDateForCaching: startDate,
+					aEndDateForCaching: endDate,
+					totalNoOfEvents: eventCount,
+					totalNoOfToDos: toDoCount
+				};
+
+		if(aDBConn.connectionReady && aDBConn.tableExists("items")){
+				
+				let statement = aDBConn.createStatement("SELECT COUNT() as eventcount FROM items where event = 'y'");
+				let statement1 = aDBConn.createStatement("SELECT min(startDate) as startDate FROM items");
+				let statement2 = aDBConn.createStatement("SELECT max(endDate) as endDate FROM items");
+				let statement3 = aDBConn.createStatement("SELECT COUNT() as toDoCount FROM items where event = 'n'");
+								
+				try{	
+					statement.executeStep();
+					statement1.executeStep();
+					statement2.executeStep();
+					statement3.executeStep();
+
+					eventCount=statement.row.eventcount;
+					toDoCount=statement3.row.toDoCount;
+
+					startDate=statement1.row.startDate;
+					endDate=statement2.row.endDate;					
+
+					statement.finalize();
+					statement1.finalize();
+					statement2.finalize();
+					statement3.finalize();
+				}
+				catch(e){
+			       		exchWebService.commonFunctions.LOG("unable to count events"+e);					
+				}
+
+
+				cachePrefs={
+					aStartDateForCaching: startDate,
+					aEndDateForCaching: endDate,
+					totalNoOfEvents: eventCount,
+					totalNoOfToDos: toDoCount
+				};				
+			}
+		exchWebService.commonFunctions.getConsoleService().logStringMessage("in count: tsks: "+cachePrefs.totalNoOfToDos+ " events: "+cachePrefs.totalNoOfEvents+" start date: " +cachePrefs.aStartDateForCaching+ " end date: "+cachePrefs.aEndDateForCaching);
+		return cachePrefs;	
+	},
+
 	clearCachedData : function _clearCachedData(aCalendar)
 	{
-		let aDBConn = this.getDBConn(aCalendar);
+		let aDBConn = exchWebService.offlineCacheSettings.getDBConn(aCalendar);
 		if(aDBConn.connectionReady && aDBConn.tableExists("items")){
-				this.globalFunctions.LOG("clearCachedData");
+				exchWebService.commonFunctions.getConsoleService().logStringMessage("in if of delete");
 				let statement = aDBConn.createStatement("DELETE FROM items");
 				let statement1 = aDBConn.createStatement("DELETE FROM attachments");
 				let statement2 = aDBConn.createStatement("DELETE FROM attachments_per_item");
@@ -160,31 +212,28 @@ exchOfflineCacheSettings.prototype = {
 					statement2.finalize();
 				}
 				catch(e){
-			       		this.globalFunctions.LOG("unable to clear tables"+e);					
+			       		exchWebService.commonFunctions.LOG("unable to clear tables"+e);					
 				}
 			alert("cache cleared!");
 			var observerService = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
 			observerService.notifyObservers(aCalendar, "onCalReset", aCalendar.id);			
-			this.onLoad();		
+			exchWebService.offlineCacheSettings.onLoad();		
 		}
 	},
 
 	doCheckOfflineCacheChanged: function _doCheckOfflineCacheChanged(aCheckBox)
 	{
-		if (this._document.getElementById("exchWebService-offlineCacheproperties-cacheState").checked) {
-			this._document.getElementById("exchWebService-offlineCacheproperties-detaisvbox").setAttribute("collapsed", "false");
-			this._document.getElementById("exchWebService-offlineCacheproperties-maintainancegroupbox").setAttribute("collapsed", "false");
-			this._document.getElementById("exchWebService-offlineCacheproperties-preferencesgroupbox").setAttribute("collapsed", "false");
+		if (document.getElementById("exchWebService-offlineCacheproperties-cacheState").checked) {
+			document.getElementById("exchWebService-offlineCacheproperties-detaisvbox").setAttribute("collapsed", "false");
+			document.getElementById("exchWebService-offlineCacheproperties-maintainancegroupbox").setAttribute("collapsed", "false");
+			document.getElementById("exchWebService-offlineCacheproperties-preferencesgroupbox").setAttribute("collapsed", "false");
 		}
 		else {
-			this._document.getElementById("exchWebService-offlineCacheproperties-detaisvbox").setAttribute("collapsed", "true");
-			this._document.getElementById("exchWebService-offlineCacheproperties-maintainancegroupbox").setAttribute("collapsed", "true");
-			this._document.getElementById("exchWebService-offlineCacheproperties-preferencesgroupbox").setAttribute("collapsed", "true");
+			document.getElementById("exchWebService-offlineCacheproperties-detaisvbox").setAttribute("collapsed", "true");
+			document.getElementById("exchWebService-offlineCacheproperties-maintainancegroupbox").setAttribute("collapsed", "true");
+			document.getElementById("exchWebService-offlineCacheproperties-preferencesgroupbox").setAttribute("collapsed", "true");
 		}
 	},
 
 }
-
-var tmpOfflineCacheSettings = new exchOfflineCacheSettings(document, window);
-window.addEventListener("load", function () { window.removeEventListener("load",arguments.callee,false); tmpOfflineCacheSettings.onLoad(); }, true);
-
+document.addEventListener("load", exchWebService.offlineCacheSettings.onLoad, true);

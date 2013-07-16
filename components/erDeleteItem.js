@@ -67,7 +67,7 @@ function erDeleteItemRequest(aArgument, aCbOk, aCbError, aListener)
 	this.listener = aListener;
 	if (aArgument.item) {
 		this.id = aArgument.item.id;
-		this.changeKey = aArgument.item.changeKey;
+		this.changeKey = aArgument.item.getProperty("X-ChangeKey");
 	}
 	else {
 		this.id = aArgument.id;
@@ -156,13 +156,11 @@ erDeleteItemRequest.prototype = {
 		}
 
 		req.addChildTagObject(itemids);
-		itemids = null;
 
 		this.parent.xml2jxon = true;
 		
 		//exchWebService.commonFunctions.LOG("erDeleteItemRequest.execute>"+String(this.parent.makeSoapMessage(req)));
                 this.parent.sendRequest(this.parent.makeSoapMessage(req), this.serverUrl);
-		req = null;
 	},
 
 	onSendOk: function _onSendOk(aExchangeRequest, aResp)

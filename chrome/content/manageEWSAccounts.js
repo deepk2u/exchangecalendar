@@ -25,6 +25,7 @@ var Ci = Components.interfaces;
 var Cu = Components.utils;
 
 Cu.import("resource://exchangecalendar/ecFunctions.js");
+Cu.import("resource://exchangecalendar/accountFunctions.js");
 Cu.import("resource://exchangecalendar/erAutoDiscover.js");
 Cu.import("resource://exchangecalendar/erPrimarySMTPCheck.js");
 Cu.import("resource://exchangecalendar/erGetFolder.js");
@@ -36,12 +37,6 @@ exchWebService.manageEWSAccounts = {
 	_detailsChecked: false,
 	_detailsChanged: false,
 	selectedAccount: {},
-
-	accountManager : Cc["@1st-setup.nl/exchange/accountmanager;1"]
-				.getService(Ci.mivExchangeAccountManager),
-
-	globalFunctions : Cc["@1st-setup.nl/global/functions;1"]
-				.getService(Ci.mivFunctions),
 
 	set detailsChecked(aValue)
 	{
@@ -99,7 +94,7 @@ exchWebService.manageEWSAccounts = {
 
 	logInfo: function _logInfo(aMsg)
 	{
-		this.globalFunctions.LOG(aMsg);
+		exchWebService.commonFunctions.LOG(aMsg);
 	},
 
 	onLoad: function _onLoad()
@@ -112,11 +107,11 @@ exchWebService.manageEWSAccounts = {
 			}
 		}
 
-		var accounts = this.accountManager.getAccounts();
+		var accounts = exchWebService.accountFunctions.getAccounts();
 
 		for (var index in accounts) {
 			if (listbox) {
-				var newItem = listbox.appendItem( accounts[index].name.value, accounts[index].id);
+				var newItem = listbox.appendItem( accounts[index].name, accounts[index].id);
 			}
 		}
 	},
@@ -125,16 +120,16 @@ exchWebService.manageEWSAccounts = {
 	{
 		document.getElementById("exchWebService_autodiscover").disabled = false;
 
-		document.getElementById("exchWebService_manageEWSAccounts_account_name").value = aAccount.name.value;
+		document.getElementById("exchWebService_manageEWSAccounts_account_name").value = aAccount.name;
 		document.getElementById("exchWebService_manageEWSAccounts_account_name").disabled = false;
 
-		document.getElementById("exchWebService_server").value = aAccount.server.value;
+		document.getElementById("exchWebService_server").value = aAccount.server;
 		document.getElementById("exchWebService_server").disabled = false;
 
-		document.getElementById("exchWebService_mailbox").value = aAccount.mailbox.value;
+		document.getElementById("exchWebService_mailbox").value = aAccount.mailbox;
 		document.getElementById("exchWebService_mailbox").disabled = false;
 
-		document.getElementById("exchWebService_windowsuser").value = aAccount.user.value;
+		document.getElementById("exchWebService_windowsuser").value = aAccount.user;
 		document.getElementById("exchWebService_windowsuser").disabled = false;
 	},
 
@@ -169,10 +164,7 @@ exchWebService.manageEWSAccounts = {
 			return;
 		}
 
-		var tmpResult = this.accountManager.getAccountById(item.value);
-
-		if (!tmpResult.result) return;
-		this.selectedAccount = tmpResult.account;
+		if (!exchWebService.accountFunctions.getAccountById(item.value, this.selectedAccount)) return;
 
 		this.showDetails(this.selectedAccount);			
 
@@ -190,22 +182,22 @@ exchWebService.manageEWSAccounts = {
 	addNewAccount: function _addNewAccount()
 	{
 		this.selectedAccount = {
-				id : this.globalFunctions.getUUID(),
-				name: { type: "string", value:"new Account"},
-				server: { type: "string", value:""},
-				user: { type: "string", value:""},
-				mailbox: { type: "string", value:""} };
-		this.accountManager.saveAccount(this.selectedAccount);
+				id : exchWebService.commonFunctions.getUUID(),
+				name: "new Account",
+				server: "",
+				user: "",
+				mailbox: "" };
+		exchWebService.accountFunctions.saveAccount(this.selectedAccount);
 		var listbox = document.getElementById("exchWebService-manageEWSAccounts-accounts-listbox");
 		if (listbox) {
-			var newItem = listbox.appendItem( this.selectedAccount.name.value, this.selectedAccount.id);
+			var newItem = listbox.appendItem( this.selectedAccount.name, this.selectedAccount.id);
 			listbox.selectedItem = newItem;
 		}
 	},
 
 	removeAccount: function _removeAccount()
 	{
-		this.accountManager.removeAccount(this.selectedAccount);
+		exchWebService.accountFunctions.removeAccount(this.selectedAccount);
 		
 		var listbox = document.getElementById("exchWebService-manageEWSAccounts-accounts-listbox");
 		if (listbox) {
@@ -230,8 +222,8 @@ exchWebService.manageEWSAccounts = {
 	saveAccount: function _saveAccount()
 	{
 		this.detailsChanged = false;
-		this.accountManager.saveAccount(this.selectedAccount);
-		document.getElementById("exchWebService-manageEWSAccounts-accounts-listbox").selectedItem.label = this.selectedAccount.name.value;
+		exchWebService.accountFunctions.saveAccount(this.selectedAccount);
+		document.getElementById("exchWebService-manageEWSAccounts-accounts-listbox").selectedItem.label = this.selectedAccount.name;
 	},
 
 	doAutodiscoverChanged: function _doAutodiscoverChanged(aCheckBox)
@@ -252,16 +244,16 @@ exchWebService.manageEWSAccounts = {
 	doNameChanged: function _doNameChanged(aTextBox)
 	{
 		this.detailsChanged = true;
-		this.selectedAccount.name.value = aTextBox.value;
+		this.selectedAccount.name = aTextBox.value;
 	},
 
 	doServerChanged: function _doServerChanged(aTextBox)
 	{
 		document.getElementById("exchWebService_server_status").status = 0;
 		this.detailsChecked = false;
-		this.selectedAccount.server.value = aTextBox.value;
+		this.selectedAccount.server = aTextBox.value;
 		if (aTextBox.value != "") {
-			var serverExists = this.accountManager.getAccountByServer(this.selectedAccount.server.value);
+			var serverExists = exchWebService.accountFunctions.getAccountByServer(this.selectedAccount.server);
 			if ((serverExists != null) && (serverExists.id != this.selectedAccount.id)) {
 				// We allready have an account with the same server. warn and remove save button.
 				this.detailsChanged = false;
@@ -276,14 +268,14 @@ exchWebService.manageEWSAccounts = {
 		document.getElementById("exchWebService_mailbox_status").status = 0;
 		this.detailsChecked = false;
 		this.detailsChanged = true;
-		this.selectedAccount.mailbox.value = aTextBox.value;
+		this.selectedAccount.mailbox = aTextBox.value;
 	},
 
 	doUserChanged: function _doUserChanged(aTextBox)
 	{
 		this.detailsChecked = false;
 		this.detailsChanged = true;
-		this.selectedAccount.user.value = aTextBox.value;
+		this.selectedAccount.user = aTextBox.value;
 	},
 
 	doAutodiscoverCheck: function _doAutodiscoverCheck()
@@ -302,13 +294,13 @@ exchWebService.manageEWSAccounts = {
 		}
 		catch(err) {
 			window.setCursor("auto");
-			this.globalFunctions.ERROR("Warning: Could not create erAutoDiscoverRequest. Err="+err+"\n");
+			exchWebService.commonFunctions.ERROR("Warning: Could not create erAutoDiscoverRequest. Err="+err+"\n");
 		}
 	},
 
 	autodiscoveryOK: function _autodiscoveryOK(ewsUrls, DisplayName, SMTPAddress)
 	{
-		this.globalFunctions.LOG("ecAutodiscoveryOK");
+		exchWebService.commonFunctions.LOG("ecAutodiscoveryOK");
 		var selectedEWSUrl = {value:undefined};
 		var userCancel = false;
 
@@ -322,7 +314,7 @@ exchWebService.manageEWSAccounts = {
 					ewsUrls, selectedEWSUrl); 
 
 				if ((!selectedEWSUrl.value) || (selectedEWSUrl.value == "")) {
-					this.globalFunctions.LOG("  ++++ Selection canceled by user");
+					exchWebService.commonFunctions.LOG("  ++++ Selection canceled by user");
 					userCancel = true;
 				}
 			}
@@ -354,7 +346,7 @@ exchWebService.manageEWSAccounts = {
 
 	autodiscoveryError: function _autodiscoveryError(aExchangeRequest, aCode, aMsg)
 	{
-		this.globalFunctions.LOG("ecAutodiscoveryError. aCode:"+aCode+", aMsg:"+aMsg);
+		exchWebService.commonFunctions.LOG("ecAutodiscoveryError. aCode:"+aCode+", aMsg:"+aMsg);
 		switch (aCode) {
 		case -20:
 		case -30:
@@ -367,10 +359,10 @@ exchWebService.manageEWSAccounts = {
 		case -16:
 		case -17:
 		case -18:
-			alert(this.globalFunctions.getString("calExchangeCalendar", "ecErrorAutodiscoveryURLInvalid", [document.getElementById("exchWebService_mailbox").value], "exchangecalendar"));
+			alert(exchWebService.commonFunctions.getString("calExchangeCalendar", "ecErrorAutodiscoveryURLInvalid", [document.getElementById("exchWebService_mailbox").value], "exchangecalendar"));
 			break;
 		default:
-			alert(this.globalFunctions.getString("calExchangeCalendar", "ecErrorAutodiscovery", [aMsg, aCode], "exchangecalendar"));
+			alert(exchWebService.commonFunctions.getString("calExchangeCalendar", "ecErrorAutodiscovery", [aMsg, aCode], "exchangecalendar"));
 		}
 
 		document.getElementById("exchWebService_autodiscovercheckbutton").disabled = false;
@@ -396,7 +388,7 @@ exchWebService.manageEWSAccounts = {
 		}
 		catch(err) {
 			window.setCursor("auto");
-			this.globalFunctions.ERROR("Warning: Error during creation of erGetFolderRequest. Err="+err+"\n");
+			exchWebService.commonFunctions.ERROR("Warning: Error during creation of erGetFolderRequest. Err="+err+"\n");
 		}
 	},
 
@@ -411,16 +403,16 @@ exchWebService.manageEWSAccounts = {
 
 	checkServerError: function _checkServerError(aExchangeRequest, aCode, aMsg)
 	{
-		this.globalFunctions.LOG("exchWebServicesCheckServerError");
+		exchWebService.commonFunctions.LOG("exchWebServicesCheckServerError");
 		switch (aCode) {
 		case -20:
 		case -30:
 			break;
 		case -6:
-			alert(this.globalFunctions.getString("calExchangeCalendar", "ecErrorServerCheckURLInvalid", [document.getElementById("exchWebService_server").value], "exchangecalendar"));
+			alert(exchWebService.commonFunctions.getString("calExchangeCalendar", "ecErrorServerCheckURLInvalid", [document.getElementById("exchWebService_server").value], "exchangecalendar"));
 			break;
 		default:
-			alert(this.globalFunctions.getString("calExchangeCalendar", "ecErrorServerCheck", [aMsg, aCode], "exchangecalendar"));
+			alert(exchWebService.commonFunctions.getString("calExchangeCalendar", "ecErrorServerCheck", [aMsg, aCode], "exchangecalendar"));
 		}
 		document.getElementById("exchWebService_servercheckbutton").disabled = false;
 

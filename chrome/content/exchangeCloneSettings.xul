@@ -39,8 +39,8 @@
   buttons="accept,cancel"
   buttonlabelaccept="&label.acceptbutton;"
   buttonlabelcancel="&label.cancelbutton;"
-  ondialogaccept="return tmpExchangeCloneSettings.onSave();"
-  onload="tmpExchangeCloneSettings.onLoad();">
+  ondialogaccept="return exchWebService.exchangeCloneSettings.onSave();"
+  onload="exchWebService.exchangeCloneSettings.onLoad();">
 
 	<script type="application/javascript" src="chrome://exchangecalendar/content/exchangeCloneSettings.js"/>
 
@@ -49,7 +49,7 @@
 		<textbox id="exchWebService_clone_description"/>
 	</hbox>
 
-	<vbox id="exchWebService-exchange-settings" flex="1">
+	<vbox id="exchWebService-exchange-settings">
 	</vbox>
 
 </dialog>

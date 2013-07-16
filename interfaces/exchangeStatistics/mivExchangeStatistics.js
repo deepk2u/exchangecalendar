@@ -32,11 +32,6 @@ function mivExchangeStatistics() {
 
 	this.globalFunctions = Cc["@1st-setup.nl/global/functions;1"]
 				.getService(Ci.mivFunctions);
-
-	this.dataRead = {};
-	this.dataSend = {};
-
-	this._xml2jxonCount = 0;
 }
 
 var PREF_MAINPART = 'extensions.1st-setup.exchangecalendar.statistics.';
@@ -47,13 +42,28 @@ mivExchangeStatistics.prototype = {
 
 	// methods from nsISupport
 
+	_refCount: 0,
+
+	//nsrefcnt AddRef();
+	AddRef: function _AddRef()
+	{
+		this._refCount++;
+		return this._refCount;
+	},
+
 	/* void QueryInterface(
 	  in nsIIDRef uuid,
 	  [iid_is(uuid),retval] out nsQIResult result
 	);	 */
 	QueryInterface: XPCOMUtils.generateQI([Ci.mivExchangeStatistics,
-			Ci.nsIClassInfo,
 			Ci.nsISupports]),
+
+	//nsrefcnt Release();
+	Release: function _Release()
+	{
+		this._refCount--;
+		return this._refCount;
+	},
 
 	// Attributes from nsIClassInfo
 
@@ -63,24 +73,16 @@ mivExchangeStatistics.prototype = {
 	flags: Ci.nsIClassInfo.SINGLETON || Ci.nsIClassInfo.THREADSAFE,
 	implementationLanguage: Ci.nsIProgrammingLanguage.JAVASCRIPT,
 
-	// void getInterfaces(out PRUint32 count, [array, size_is(count), retval] out nsIIDPtr array);
-	getInterfaces: function _getInterfaces(count) 
-	{
-		var ifaces = [Ci.mivExchangeStatistics,
-			Ci.nsIClassInfo,
-			Ci.nsISupports];
-		count.value = ifaces.length;
-		return ifaces;
-	},
-
-	getHelperForLanguage: function _getHelperForLanguage(language) {
-		return null;
-	},
 	// External methods
 
 	setServerVersion: function _setServerVersion(aURL, aVersion)
 	{
-		this.serverVersions[aURL] = aVersion;
+		if (aVersion == "Exchange2010_SP2") {
+			this.serverVersions[aURL] = "Exchange2010_SP1";
+		}
+		else {
+			this.serverVersions[aURL] = aVersion;
+		}
 	},
 
 	getServerVersion: function _getServerVersion(aURL)
@@ -90,34 +92,6 @@ mivExchangeStatistics.prototype = {
 		}
 	
 		return "Exchange2007_SP1";
-	},
-
-	getURLList: function _getURLList(aCount)
-	{
-		var result = new Array();
-		for (var index in this.serverVersions) {
-			result.push(index);
-		}
-		aCount.value = result.length;
-		return result;
-	},
-
-	addDataRead: function _addDataRead(aURL, aSize)
-	{
-		if (!this.dataRead[aURL]) {
-			this.dataRead[aURL] = 0;
-		}
-		this.dataRead[aURL] += aSize;
-//		dump("addDataRead: server:"+aURL+", dataRead:"+this.dataRead[aURL]+"\n");
-	},
-
-	addDataSend: function _addDataSend(aURL, aSize)
-	{
-		if (!this.dataSend[aURL]) {
-			this.dataSend[aURL] = 0;
-		}
-		this.dataSend[aURL] += aSize;
-//		dump("addDataSend: server:"+aURL+", dataSend:"+this.dataSend[aURL]+"\n");
 	},
 
 	// Internal methods.
@@ -137,16 +111,6 @@ mivExchangeStatistics.prototype = {
 		}
 	},
 
-	addXML2JXONObject: function _addXML2JXONObject()
-	{
-		this._xml2jxonCount++;
-		dump(" xml2xjonCount:"+this._xml2jxonCount+"\n");
-	},
-
-	get xml2jxonCount()
-	{
-		return this._xml2jxonCount;
-	},
 }
 
 function NSGetFactory(cid) {

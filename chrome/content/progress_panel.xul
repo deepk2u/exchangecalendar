@@ -31,6 +31,7 @@
  * ***** BEGIN LICENSE BLOCK *****/
 -->
 
+<!--<!DOCTYPE overlay SYSTEM "chrome://exchangecalendar/locale/progress_panel.dtd"> -->
 
 <?xml-stylesheet href="chrome://exchangecalendar/content/progress_panel.css" type="text/css"?>
 
@@ -43,18 +44,26 @@
 		<tooltip id="exchWebServicesprogresstip" orient="vertical">
 			<vbox id="exchWebServiceProgressvbox">
 			</vbox>
+			<grid flex="1" id="exchWebServices.progress.grid">
+				<columns>
+					<column />
+					<column flex="1" />
+				</columns>
+				<rows id="exchWebServices.progress.rows">
+				</rows>
+			</grid>
 		</tooltip>  
 	</popupset>
 
   <statusbar id="status-bar">
 	<statusbarpanel id="exchWebService-progress-panel"
 			insertbefore="unreadMessageCount,totalMessageCount"
-			oncommand="myExchProgressPanel.openProgressDialog()"
+			oncommand="exchWebServices.progressPanel.openProgressDialog()"
 			hidden="true"
 			tooltip="exchWebServicesprogresstip">
 		<hbox id="exchWebService-progress-hbox">
 			<label id="exchWebService-progress-label"
-				onclick="myExchProgressPanel.openProgressDialog()" value="Test"/>
+				onclick="exchWebService.progressPanel.openProgressDialog()" value="Test"/>
 			<image id="exchWebService-progress-image"/>
 		</hbox>
 	</statusbarpanel>

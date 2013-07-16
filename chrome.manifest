@@ -9,7 +9,6 @@ overlay chrome://messenger/content/messenger.xul chrome://exchangecalendar/conte
 overlay chrome://calendar/content/calendar-task-view.xul chrome://exchangecalendar/content/messenger_task_delegation.xul
 overlay chrome://lightning/content/lightning-standalone.xul chrome://exchangecalendar/content/progress_panel.xul
 overlay chrome://calendar/content/calendar-event-dialog.xul chrome://exchangecalendar/content/calendar-event-dialog.xul
-overlay chrome://calendar/content/calendar-event-dialog-reminder.xul chrome://exchangecalendar/content/calendar-event-dialog-reminder.xul
 overlay chrome://calendar/content/calendar-summary-dialog.xul chrome://exchangecalendar/content/calendar-summary-dialog.xul
 overlay chrome://calendar/content/calendar-properties-dialog.xul chrome://exchangecalendar/content/calendar-properties-dialog.xul
 overlay chrome://messenger/content/messenger.xul chrome://exchangecalendar/content/sharedCalendarParser.xul application={3550f703-e582-4d05-9a08-453d09bdfdc6}
@@ -24,7 +23,6 @@ overlay chrome://communicator/content/pref/preferences.xul chrome://exchangecale
 overlay chrome://calendar/content/calendar-common-sets.xul chrome://exchangecalendar/content/calendar-common-sets.xul
 overlay chrome://calendar/content/calendar-event-dialog-attendees.xul chrome://exchangecalendar/content/calendar-event-dialog-attendees.xul
 overlay chrome://messenger/content/messenger.xul chrome://exchangecalendar/content/OutOfOfficeMenu.xul
-overlay chrome://messenger/content/messengercompose/messengercompose.xul chrome://exchangecalendar/content/addressingWidgetOverlay.xul
 
 locale exchangecalendar nl locale/exchangecalendar/nl/
 locale exchangecalendar en-US locale/exchangecalendar/en-US/
@@ -33,33 +31,32 @@ locale exchangecalendar de locale/exchangecalendar/de/
 locale exchangecalendar ja-JP locale/exchangecalendar/ja-JP/
 locale exchangecalendar sv locale/exchangecalendar/sv/
 
-manifest interfaces/exchangeCalendar/mivExchangeCalendar.manifest
+component {720a458e-b6cd-4883-8a4d-5be27ec454d8} components/calExchangeCalendar.js
+contract @mozilla.org/calendar/calendar;1?type=exchangecalendar {720a458e-b6cd-4883-8a4d-5be27ec454d8}
 
-manifest interfaces/global/mivFunctions.manifest
-manifest interfaces/exchangeAccountManager/mivExchangeAccountManager.manifest
+component {227664eb-cce6-4b7a-8d57-0bb0c6c9b362} components/exchangeAbRootDirectory.js
+contract @mozilla.org/addressbook/directory;1?type=exchWebService-contactRoot-directory {227664eb-cce6-4b7a-8d57-0bb0c6c9b362}
+
+component {5963e917-bc68-4b68-b704-65538c81a628} components/exchangeAbFolderDirectory.js
+contract @mozilla.org/addressbook/directory;1?type=exchWebService-contactFolder-directory {5963e917-bc68-4b68-b704-65538c81a628}
+
+component {9e260dc4-90d3-457b-8885-8dff0f69eea3} components/exchangeAbDistListDirectory.js
+contract @mozilla.org/addressbook/directory;1?type=exchWebService-distList-directory {9e260dc4-90d3-457b-8885-8dff0f69eea3}
+
+component {e6f8074c-0236-4f51-b8e2-9c528727b4ee} components/exchangeAbDirFactory.js
+contract @mozilla.org/addressbook/directory-factory;1?name=exchWebService-contactRoot-directory {e6f8074c-0236-4f51-b8e2-9c528727b4ee}
+
+overlay chrome://messenger/content/addressbook/addressbook.xul chrome://exchangecalendar/content/addressbookOverlay.xul
+
+
 manifest interfaces/exchangeStatistics/mivExchangeStatistics.manifest
-manifest interfaces/exchangeTimeZones/mivExchangeTimeZones.manifest
 manifest interfaces/exchangeBadCertListener2/mivExchangeBadCertListener2.manifest
+manifest interfaces/global/mivFunctions.manifest
 manifest interfaces/xml2jxon/mivIxml2jxon.manifest
-manifest interfaces/xml2jxon/mivNameSpaces.manifest
-manifest interfaces/xml2jxon/mivTagNames.manifest
 manifest interfaces/updater/mivUpdater.manifest
 manifest interfaces/exchangeLoadBalancer/mivExchangeLoadBalancer.manifest
 manifest interfaces/exchangeAuthPromptProvider/mivExchangeAuthPromptProvider.manifest
 manifest interfaces/exchangeAuthPrompt2/mivExchangeAuthPrompt2.manifest
-
-manifest interfaces/exchangeAttendee/mivExchangeAttendee.manifest
-manifest interfaces/exchangeBaseItem/mivExchangeBaseItem.manifest
 manifest interfaces/exchangeEvent/mivExchangeEvent.manifest
-manifest interfaces/exchangeTodo/mivExchangeTodo.manifest
-
-manifest interfaces/exchangeAddressBook/exchangeAddressBook.manifest
-
-manifest interfaces/exchangeRecurrenceInfo/mivExchangeRecurrenceInfo.manifest
-manifest interfaces/exchangeLightningNotifier/mivExchangeLightningNotifier.manifest
-
-manifest interfaces/exchangeAutoCompleteSearch/mivExchangeAutoCompleteSearch.manifest
-manifest interfaces/exchangeAutoCompleteResult/mivExchangeAutoCompleteResult.manifest
-
-manifest email/chrome.manifest
+manifest interfaces/exchangeAbCard/mivExchangeAbCard.manifest
 

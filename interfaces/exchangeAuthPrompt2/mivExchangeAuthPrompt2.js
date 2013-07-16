@@ -79,17 +79,6 @@ mivExchangeAuthPrompt2.prototype = {
 		}
 	},
 
-	removePasswordCache: function _removePasswordCache(aUsername, aURL)
-	{
-		for (var name in this.passwordCache) {
-			if (name.indexOf("|"+aURL+"|")) {
-				this.logInfo("removePasswordCache: Clearing passwordCache for URL:"+aURL);
-
-				delete this.passwordCache[name];
-			}
-		}
-	},
-
 	getPassword: function _getPassword(aChannel, username, aURL, aRealm, alwaysGetPassword, useCached)
 	{
 		if ((!username) || (!aURL)) {
@@ -173,7 +162,7 @@ mivExchangeAuthPrompt2.prototype = {
 			}
 		}
 
-//try {
+try {
 		if (!password) {
 
 			if (!this.details[aURL]) { 
@@ -215,7 +204,7 @@ mivExchangeAuthPrompt2.prototype = {
 
 		this.logInfo("getPassword: We have a password:"+password);
 
-//} catch(err) { this.logInfo("getPassword: Error:"+err); }
+} catch(err) { this.logInfo("getPassword: Error:"+err); }
 		return password;
 	},
  
@@ -246,13 +235,6 @@ mivExchangeAuthPrompt2.prototype = {
 			var aContext = request.context;
 			var level = request.level;
 			var authInfo = request.authInfo;
-			var canUseBasicAuth = false;
-
-			if (this.details[aURL].previousFailedCount > 4) { // Maybe make this a user preference
-				this.logInfo("asyncPromptAuthNotifyCallback: We have more than '"+this.details[aURL].previousFailedCount+"' previous failed for '"+aURL+"'.");
-				aCallback.onAuthCancelled(aContext, false);
-				return;
-			}
 
 			var username;
 			var password;
@@ -293,7 +275,6 @@ mivExchangeAuthPrompt2.prototype = {
 									realm = realm.replace('"', "");
 								}
 								this.logInfo("asyncPromptAuthNotifyCallback: Found a realm going to use it. realm="+realm);
-								canUseBasicAuth = true;
 							}
 						}
 					}
@@ -355,17 +336,6 @@ mivExchangeAuthPrompt2.prototype = {
 				this.logInfo("asyncPromptAuthNotifyCallback: authInfo{ password:"+authInfo.password+", username:"+authInfo.username+", domain:"+authInfo.domain+"}");
 				try {
 					this.logInfo("asyncPromptAuthNotifyCallback: Sending authInfo to callback function.");
-					if (canUseBasicAuth == true) {
-						this.logInfo("asyncPromptAuthNotifyCallback: We can also use Basic authorization going to add header.");
-						var tok = authInfo.username + ':' + authInfo.password;
-						var basicAuthHash = btoa(tok);
-						try {
-							aChannel.setRequestHeader('Authorization', "Basic " + basicAuthHash, true);
-						}
-						catch(err) {
-							this.logInfo("asyncPromptAuthNotifyCallback: Error adding Basic authorization header. err:"+err);
-						}
-					}
 					aCallback.onAuthAvailable(aContext, authInfo);
 				}
 				catch(err) {
@@ -415,6 +385,12 @@ mivExchangeAuthPrompt2.prototype = {
 		this.logInfo("asyncPromptAuth: authInfo.password="+authInfo.password);
 		this.logInfo("asyncPromptAuth: authInfo.domain="+authInfo.domain);
 
+		if (authInfo.flags & Ci.nsIAuthInformation.ONLY_PASSWORD) this.logInfo("asyncPromptAuth: authInfo.flags & ONLY_PASSWORD");
+		if (authInfo.flags & Ci.nsIAuthInformation.AUTH_HOST) this.logInfo("asyncPromptAuth: authInfo.flags & AUTH_HOST");
+		if (authInfo.flags & Ci.nsIAuthInformation.AUTH_PROXY) this.logInfo("asyncPromptAuth: authInfo.flags & AUTH_PROXY");
+		if (authInfo.flags & Ci.nsIAuthInformation.NEED_DOMAIN) this.logInfo("asyncPromptAuth: authInfo.flags & NEED_DOMAIN");
+		if (authInfo.flags & Ci.nsIAuthInformation.PREVIOUS_FAILED) this.logInfo("asyncPromptAuth: authInfo.flags & PREVIOUS_FAILED");
+
 		var URL = decodeURIComponent(aChannel.URI.scheme+"://"+aChannel.URI.hostPort+aChannel.URI.path);
 		this.logInfo("asyncPromptAuth: aChannel.URL="+URL+", username="+decodeURIComponent(aChannel.URI.username)+", password="+decodeURIComponent(aChannel.URI.password));
 
@@ -425,20 +401,7 @@ mivExchangeAuthPrompt2.prototype = {
 						canceled: false,
 						queue: new Array(),
 						ntlmCount: 0,
-						previousFailedCount: 0,
 					};
-
-		if (authInfo.flags & Ci.nsIAuthInformation.ONLY_PASSWORD) this.logInfo("asyncPromptAuth: authInfo.flags & ONLY_PASSWORD");
-		if (authInfo.flags & Ci.nsIAuthInformation.AUTH_HOST) this.logInfo("asyncPromptAuth: authInfo.flags & AUTH_HOST");
-		if (authInfo.flags & Ci.nsIAuthInformation.AUTH_PROXY) this.logInfo("asyncPromptAuth: authInfo.flags & AUTH_PROXY");
-		if (authInfo.flags & Ci.nsIAuthInformation.NEED_DOMAIN) this.logInfo("asyncPromptAuth: authInfo.flags & NEED_DOMAIN");
-		if (authInfo.flags & Ci.nsIAuthInformation.PREVIOUS_FAILED) {
-			this.logInfo("asyncPromptAuth: authInfo.flags & PREVIOUS_FAILED");
-			this.details[URL].previousFailedCount++;
-		}
-		else {
-			this.details[URL].previousFailedCount = 0;
-		}
 
 		try {
 			var offeredAuthentications = channel.getRequestHeader("Authorization");
@@ -676,7 +639,7 @@ mivExchangeAuthPrompt2.prototype = {
 
 		this.debug = this.globalFunctions.safeGetBoolPref(prefB, "extensions.1st-setup.authentication.debug", false, true);
 		if (this.debug) {
-			this.globalFunctions.LOG("mivExchangeAuthPrompt2: "+aMsg + " ("+this.globalFunctions.STACKshort()+")");
+			this.globalFunctions.LOG("mivExchangeAuthPrompt2: "+aMsg);
 		}
 	},
 
